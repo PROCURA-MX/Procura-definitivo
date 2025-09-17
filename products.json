@@ -1,0 +1,26 @@
+﻿
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : [{"id":"faf767b4-e52e-4092-85cf-2bf5318f3687","name":"6 
+                    Gramíneas"},{"id":"00665ad8-bb36-4dfc-a4ca-3acfd28c8f4a","name":"6 Gramíneas 
+                    B"},{"id":"5b50199d-8229-48e9-aebd-671b62743e3a","name":"Abedul"},{...
+RawContent        : HTTP/1.1 200 OK
+                    Access-Control-Allow-Origin: http://localhost:5173
+                    Vary: Origin
+                    Access-Control-Allow-Credentials: true
+                    Connection: keep-alive
+                    Keep-Alive: timeout=5
+                    Content-Length: 7102
+                    Content-...
+Forms             : {}
+Headers           : {[Access-Control-Allow-Origin, http://localhost:5173], [Vary, Origin], 
+                    [Access-Control-Allow-Credentials, true], [Connection, keep-alive]...}
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 7102
+
+
+
