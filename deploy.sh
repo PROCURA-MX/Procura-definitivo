@@ -164,3 +164,5 @@ log "     - Health: https://tu-dominio.com/health"
 # Mostrar estado de los contenedores
 log "📋 Estado de los contenedores:"
 docker-compose -f docker-compose.prod.yml ps
+
+

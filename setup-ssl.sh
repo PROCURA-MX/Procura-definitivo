@@ -73,3 +73,5 @@ systemctl enable nginx
 log "✅ Configuración SSL completada!"
 log "🌐 Tu sitio está disponible en: https://$DOMAIN"
 log "🔒 Certificado SSL válido hasta: $(openssl x509 -in /etc/letsencrypt/live/$DOMAIN/fullchain.pem -noout -dates | grep notAfter | cut -d= -f2)"
+
+

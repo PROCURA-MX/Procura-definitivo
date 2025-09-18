@@ -22,6 +22,9 @@ export interface TreatmentLogDto {
   };
   observaciones?: string;
   userId: string;
+  productId?: string;
+  fechaAplicacion?: Date;
+  notas?: string;
 }
 
 export class ImmunotherapyService {

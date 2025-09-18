@@ -39,3 +39,5 @@ EXPOSE 3002
 # Comando de inicio
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "start"]
+
+

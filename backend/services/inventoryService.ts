@@ -132,6 +132,7 @@ interface ProcessUsageDto {
   tuvoReaccion: boolean;
   descripcionReaccion?: string;
   items: UsageFormItemDto[];
+  organizationId?: string;
 }
 
 export async function processInventoryUsage(dto: ProcessUsageDto) {

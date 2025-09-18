@@ -165,3 +165,5 @@ echo "2. Clonar el repositorio"
 echo "3. Configurar variables de entorno"
 echo "4. Ejecutar migraciones de base de datos"
 echo "5. Iniciar la aplicación"
+
+
