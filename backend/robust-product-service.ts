@@ -231,7 +231,7 @@ export class RobustProductService {
     return await this.prisma.product.findMany({
       where: whereClause,
       include: {
-        stockBySede: {
+        StockBySede: {
           where: { sedeId: sedeId },
           select: { quantity: true }
         }
