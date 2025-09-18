@@ -15,7 +15,7 @@ export interface TreatmentLogDto {
   tipoTratamiento: string;
   subtipo: string;
   unidades?: number;
-  dosis: number;
+  dosis: string;
   alergenos: string[];
   medicamentoReaccion?: {
     administrado: boolean;
@@ -248,7 +248,7 @@ export class ImmunotherapyService {
         alergenos: lastEntry.alergenos || [],
         frascos: (lastEntry as any).frascos || [],
         productId: (lastEntry as any).productId,
-        observaciones: lastEntry.notas || '',
+        observaciones: lastEntry.observaciones || '',
         fechaTratamiento: lastEntry.fechaAplicacion,
         nombrePaciente: record.paciente ? `${record.paciente.nombre} ${record.paciente.apellido}` : 'Paciente',
         totalTratamientos: record.logs?.length || 0

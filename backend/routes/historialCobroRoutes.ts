@@ -4,10 +4,10 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-router.get('/', asyncHandler(historialCobroController.getAllHistorialCobros));
-router.get('/:id', asyncHandler(historialCobroController.getHistorialCobroById));
-router.post('/', asyncHandler(historialCobroController.createHistorialCobro));
-router.put('/:id', asyncHandler(historialCobroController.updateHistorialCobro));
+router.get('/', ...historialCobroController.getAllHistorialCobros);
+router.get('/:id', ...historialCobroController.getHistorialCobroById);
+router.post('/', ...historialCobroController.createHistorialCobro);
+router.put('/:id', ...historialCobroController.updateHistorialCobro);
 router.delete('/:id', asyncHandler(historialCobroController.deleteHistorialCobro));
 
 export default router; 
