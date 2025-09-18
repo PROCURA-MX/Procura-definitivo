@@ -11,6 +11,9 @@ import prisma from '../prisma';
     tenantId?: string;
     organizationId?: string;
     tenantFilter?: any;
+    params: any;
+    body: any;
+    query: any;
   }
 
 /**

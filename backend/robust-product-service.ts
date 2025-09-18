@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 
 /**
  * 🏗️ SERVICIO ROBUSTO DE PRODUCTOS
@@ -68,7 +69,7 @@ export class RobustProductService {
           },
           select: { quantity: true }
         });
-        stock = stockRecord?.quantity || 0;
+        stock = stockRecord?.quantity ? Number(stockRecord.quantity) : 0;
       }
 
       return {
@@ -152,7 +153,7 @@ export class RobustProductService {
           },
           select: { quantity: true }
         });
-        stock = stockRecord?.quantity || 0;
+        stock = stockRecord?.quantity ? Number(stockRecord.quantity) : 0;
       }
 
       return {
@@ -192,7 +193,7 @@ export class RobustProductService {
       select: { quantity: true }
     });
 
-    const availableStock = stock?.quantity || 0;
+    const availableStock = stock?.quantity ? Number(stock.quantity) : 0;
     const hasStock = availableStock >= requiredQuantity;
     const deficit = hasStock ? 0 : requiredQuantity - availableStock;
 
