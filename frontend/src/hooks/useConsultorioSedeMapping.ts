@@ -110,7 +110,7 @@ export function useConsultorioSedeMapping() {
       return 'not-found'; // Indicador de que no se encontró
     }
     
-    const result = consultorio.sedeId;
+    const result = consultorio.sedeId || 'not-found';
     console.log('✅ Hook - Usando mapping dinámico, resultado:', result);
     return result;
   };
@@ -126,7 +126,7 @@ export function useConsultorioSedeMapping() {
       if (mapping && mapping.consultorios.length > 0) {
         const firstConsultorio = mapping.consultorios[0];
         console.log('🔄 Hook - Usando primer consultorio disponible:', firstConsultorio.sedeId);
-        return firstConsultorio.sedeId;
+        return firstConsultorio.sedeId || 'loading';
       }
       return 'loading'; // Si no hay mapping, esperar
     }

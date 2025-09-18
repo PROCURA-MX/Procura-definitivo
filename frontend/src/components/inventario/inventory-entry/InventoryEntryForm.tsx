@@ -639,7 +639,7 @@ export default function InventoryEntryForm() {
           mlPerVial={needsMlCalculation(selectedCategory) ? Number(mlPerVial) || undefined : undefined}
           expiryDate={expiry || undefined}
           sedeId={sedeId !== 'loading' ? sedeId : undefined}
-          consultorioId={effectiveConsultorioId}
+          consultorioId={effectiveConsultorioId || undefined}
           userId={getCurrentUserId()}
         />
       )}

@@ -37,7 +37,7 @@ export default function PatientSearchBar({
   const [hasResults, setHasResults] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Función de búsqueda optimizada con debounce
   const performSearch = (term: string, filter: SearchFilter) => {

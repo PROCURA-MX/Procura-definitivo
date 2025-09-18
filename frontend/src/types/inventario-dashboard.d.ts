@@ -1,17 +1,20 @@
 import { ReactNode } from 'react';
 
 export interface ProductInventoryDto {
+    id: string;
     name: string;
+    category: string;
     quantity: number;
-    unitCost: number;
+    costPerUnit: number;
     totalValue: number;
-    category?: string;
+    minStockLevel: number;
+    unit: string;
 }
 
 export interface CategoryInventoryDto {
     category: string;
-    totalProducts: number;
     totalValue: number;
+    productCount: number;
 }
 
 export interface ExpirationAlertDto {

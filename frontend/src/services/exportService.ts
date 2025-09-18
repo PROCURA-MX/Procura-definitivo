@@ -5,7 +5,7 @@
 
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 export interface ExportData {
   headers: string[];
