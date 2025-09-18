@@ -6,7 +6,8 @@ import {
   createUsuarioSchema,
   updateUsuarioSchema,
   usuarioIdSchema,
-  updatePermisosSchema
+  updatePermisosSchema,
+  updateConfiguracionPermisosSchema
 } from '../schemas/validationSchemas';
 import { validateBody, validateParams, getValidatedBody, getValidatedParams } from '../middleware/validation';
 import { createNotFoundError } from '../middleware/errorHandler';

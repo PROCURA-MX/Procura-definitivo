@@ -198,6 +198,15 @@ export const updatePermisosSchema = z.object({
   puede_ver_facturas: z.boolean().optional()
 });
 
+export const updateConfiguracionPermisosSchema = z.object({
+  secretaria_editar_cobros: z.boolean().optional(),
+  secretaria_eliminar_cobros: z.boolean().optional(),
+  enfermera_entradas_inventario: z.boolean().optional(),
+  enfermera_salidas_inventario: z.boolean().optional(),
+  secretaria_entradas_inventario: z.boolean().optional(),
+  secretaria_salidas_inventario: z.boolean().optional()
+});
+
 // ========================================
 // SCHEMAS DE DISPONIBILIDAD MÉDICO
 // ========================================
