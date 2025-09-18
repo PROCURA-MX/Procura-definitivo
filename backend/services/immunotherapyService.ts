@@ -5,6 +5,9 @@ export interface ImmunotherapyRecordDto {
   organizacionId: string;
   fechaInicio: Date;
   editadoPor: string;
+  sedeId?: string;
+  tipoTratamiento?: string;
+  alergenos?: string[];
 }
 
 export interface TreatmentLogDto {
@@ -25,6 +28,9 @@ export interface TreatmentLogDto {
   productId?: string;
   fechaAplicacion?: Date;
   notas?: string;
+  reaccion?: boolean;
+  descripcionReaccion?: string;
+  frascos?: any;
 }
 
 export class ImmunotherapyService {
