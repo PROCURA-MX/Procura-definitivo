@@ -64,7 +64,7 @@ export function InventoryMetricsWithModal({
             >
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-900">{category.category}</h3>
-                <span className="text-sm text-gray-500">{category.totalProducts} productos</span>
+                <span className="text-sm text-gray-500">{category.productCount} productos</span>
               </div>
               <div className="text-2xl font-bold text-blue-600">
                 <SmartNumber value={category.totalValue} isCurrency={true} />
