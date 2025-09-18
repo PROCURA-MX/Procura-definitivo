@@ -6,21 +6,17 @@ import {
   createUsuarioSchema,
   updateUsuarioSchema,
   usuarioIdSchema,
-  createConfiguracionPermisosSchema,
-  updateConfiguracionPermisosSchema,
-  updateUsuarioPermisosSchema
+  updatePermisosSchema
 } from '../schemas/validationSchemas';
 import { validateBody, validateParams, getValidatedBody, getValidatedParams } from '../middleware/validation';
 import { createNotFoundError } from '../middleware/errorHandler';
-import { PrismaClient } from '@prisma/client';
-
-
-const prisma = new PrismaClient();
 
 interface AuthenticatedRequest extends Request {
   user?: any;
   organizacion?: any;
   tenantFilter?: any;
+  headers: any;
+  url: string;
 }
 
 interface RequestWithTenant extends Request {
@@ -29,6 +25,7 @@ interface RequestWithTenant extends Request {
     organizacion_id: string;
   };
   user?: any;
+  body: any;
 }
 
 // Obtener permisos del usuario actual
@@ -426,7 +423,7 @@ export const eliminarUsuario = [
 // Actualizar permisos de un usuario (solo doctores)
 export const actualizarPermisosUsuario = [
   validateParams(usuarioIdSchema),
-  validateBody(updateUsuarioPermisosSchema),
+  validateBody(updatePermisosSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = getValidatedParams(req);
     const permisos = getValidatedBody(req);

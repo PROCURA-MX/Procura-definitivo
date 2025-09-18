@@ -14,6 +14,7 @@ import prisma from '../prisma';
     params: any;
     body: any;
     query: any;
+    headers: any;
   }
 
 /**
