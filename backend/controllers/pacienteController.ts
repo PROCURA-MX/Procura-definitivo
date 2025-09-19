@@ -199,7 +199,7 @@ export const deletePaciente = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
   await prisma.paciente.delete({ where: { id } });
   res.json({ message: 'Paciente eliminado' });
-}); 
+});
 
 export const searchPacientes = asyncHandler(async (req: Request, res: Response) => {
   const { q } = req.query;
@@ -246,7 +246,7 @@ export const searchPacientes = asyncHandler(async (req: Request, res: Response) 
   }
   
   res.json(pacientes);
-}); 
+});
   
   let pacientes;
   if (organizacionId) {
@@ -281,4 +281,4 @@ export const searchPacientes = asyncHandler(async (req: Request, res: Response) 
   }
   
   res.json(pacientes);
-}); 
+});
