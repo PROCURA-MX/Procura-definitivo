@@ -6,6 +6,8 @@ import Pacientes from "./pages/Pacientes";
 import Usuarios from "./pages/Usuarios";
 import DashboardPage from "./pages/DashboardPage";
 import About from "./pages/About";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import Calendario from "./pages/Calendario";
 import Login from './pages/Login';
 import { useState, useEffect } from 'react';
@@ -140,6 +142,8 @@ function App() {
             } />
             
             <Route path="/about" element={<About />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/disponibilidad-bloqueos" element={<DisponibilidadBloqueos />} />
 
             </Routes>
