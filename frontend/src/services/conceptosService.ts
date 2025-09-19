@@ -31,7 +31,7 @@ axios.interceptors.response.use(
   }
 )
 
-const API_URL = 'http://localhost:3002/api/servicios';
+const API_URL = '/api/servicios';
 
 export interface Servicio {
   id: string;
