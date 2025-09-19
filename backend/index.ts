@@ -1,3 +1,7 @@
+// Cargar variables de entorno ANTES de cualquier importación
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import session from 'express-session';
@@ -15,7 +19,6 @@ import historialRoutes from './routes/historialRoutes';
 import servicioRoutes from './routes/servicioRoutes';
 import organizacionRoutes from './routes/organizacionRoutes';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import { inventoryRoutes } from './routes/inventoryRoutes';
 import permisosRoutes from './routes/permisosRoutes';
@@ -31,7 +34,6 @@ import monitoringService from './services/monitoringService'
 import immunotherapyRoutes from './routes/immunotherapyRoutes';
 import eventRoutes from './routes/eventRoutes';
 import facturacionRoutes from './routes/facturacionRoutes';
-dotenv.config();
 
 console.log("Iniciando backend optimizado para producción...");
 
@@ -64,7 +66,7 @@ app.use(compression());
 // RATE LIMITING: Proteger contra ataques de fuerza bruta
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
+  max: process.env.NODE_ENV === 'production' ? 1000 : 1000, // Aumentado para producción
   message: {
     error: 'Demasiadas peticiones desde esta IP, intenta de nuevo en 15 minutos'
   },
@@ -75,7 +77,7 @@ const limiter = rateLimit({
 // Rate limiting más estricto para autenticación
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === 'production' ? 5 : 50,
+  max: process.env.NODE_ENV === 'production' ? 20 : 50, // Aumentado para producción
   message: {
     error: 'Demasiados intentos de login, intenta de nuevo en 15 minutos'
   },
@@ -140,6 +142,8 @@ app.use(cors({
     'http://localhost:5173', // frontend Vite
     'http://localhost:3000', // posible otro frontend
     'http://localhost:3001', // posible otro frontend
+    'https://app.tuprocura.com', // dominio de producción
+    'http://138.68.252.46:3000', // IP de producción
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

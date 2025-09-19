@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 
-// Configuración optimizada para producción multi-tenant
+// Configuración optimizada para producción multi-tenant con reconexión automática
 const prisma = new PrismaClient({
   datasources: {
     db: {
@@ -9,7 +9,7 @@ const prisma = new PrismaClient({
   },
   // Configuración del pool de conexiones optimizada para producción
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  // Configuración de conexiones para evitar saturación
+  // Configuración de conexiones para evitar saturación y manejar reconexiones
   // Nota: La configuración del pool se maneja a nivel de DATABASE_URL
 })
 
@@ -38,7 +38,7 @@ prisma.$extends({
   }
 })
 
-// Middleware para manejo de errores de conexión
+// Middleware para manejo de errores de conexión y reconexión automática
 prisma.$extends({
   query: {
     async $allOperations({ operation, args, query }) {
@@ -46,8 +46,21 @@ prisma.$extends({
         return await query(args)
       } catch (error: any) {
         // Log específico para errores de conexión
-        if (error.code === 'P1001' || error.code === 'P1002') {
+        if (error.code === 'P1001' || error.code === 'P1002' || error.code === 'P1008') {
           console.error('🚨 Error de conexión a la base de datos:', error.message)
+          console.log('🔄 Intentando reconectar...')
+          
+          // Intentar reconectar una vez
+          try {
+            await prisma.$disconnect()
+            await prisma.$connect()
+            console.log('✅ Reconexión exitosa')
+            // Reintentar la query
+            return await query(args)
+          } catch (reconnectError) {
+            console.error('❌ Error en reconexión:', reconnectError)
+            throw error
+          }
         }
         throw error
       }
