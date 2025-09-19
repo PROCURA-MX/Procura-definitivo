@@ -122,3 +122,16 @@ export function DashboardMetrics({ totalInventoryValue, totalUsedInventoryCost, 
     </>
   )
 } 
+          expiryDate: e.expiryDate ? new Date(e.expiryDate).toISOString() : undefined,
+          isExpired: e.isExpired,
+          isExpiringSoon: e.isExpiringSoon,
+          status: e.status,
+          daysUntilExpiry: e.daysUntilExpiry
+        }))}
+        onClose={() => setExpirationModalOpen(false)}
+        title="Productos por Caducar"
+        isExpiration
+      />
+    </>
+  )
+} 

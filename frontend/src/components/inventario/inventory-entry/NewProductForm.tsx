@@ -255,3 +255,70 @@ export default function NewProductForm({
     </div>
   );
 } 
+              onChange={(e) => setUnit(e.target.value as ProductUnit)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            >
+              <option value={ProductUnit.PIECE}>Pieza</option>
+              <option value={ProductUnit.ML}>Mililitros</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-900">
+              Costo por Unidad *
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={costPerUnit}
+              onChange={(e) => setCostPerUnit(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              placeholder="0.00"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-900">
+              Stock Mínimo
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={minStockLevel}
+              onChange={(e) => setMinStockLevel(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              placeholder="10"
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div className="text-red-600 text-sm bg-red-50 p-2 rounded">
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <button
+            type="submit"
+            disabled={isCreating}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isCreating ? 'Creando...' : 'Crear Producto'}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+} 

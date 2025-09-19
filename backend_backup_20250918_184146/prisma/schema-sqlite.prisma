@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Paciente {
+  id                  String   @id @default(uuid())
+  nombre              String
+  fecha_nacimiento    DateTime
+  genero              String
+  direccion           String?
+  telefono            String
+  email               String
+  documento_identidad String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+  apellido            String
+  citas               citas[]
+  cobros              Cobro[]
+  InventoryUsage      InventoryUsage[]
+
+  @@map("pacientes")
+}
+
+model Usuario {
+  id         String           @id @default(uuid())
+  nombre     String
+  apellido   String
+  email      String   @unique
+  telefono   String
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+  rol        Rol
+  consultorio_id String
+  consultorio    Consultorio  @relation(fields: [consultorio_id], references: [id])
+  citas      citas[]
+  cobros     Cobro[]
+  historial  HistorialCobro[]
+
+  @@map("usuarios")
+}
+
+model Consultorio {
+  id         String              @id @default(uuid())
+  nombre     String
+  direccion  String
+  created_at DateTime            @default(now())
+  updated_at DateTime            @updatedAt
+  citas      citas[]
+  conceptos  CobroConcepto[]
+  precios    PrecioConsultorio[]
+  usuarios   Usuario[]
+
+  @@map("consultorios")
+}
+
+model PrecioConsultorio {
+  id             String      @id @default(uuid())
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+  concepto       String
+  consultorio_id String
+  precio         Float
+  consultorio    Consultorio @relation(fields: [consultorio_id], references: [id])
+
+  @@map("precios_consultorio")
+}
+
+model Cobro {
+  id           String            @id @default(uuid())
+  fecha_cobro  DateTime
+  monto_total  Float
+  notas        String?
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
+  paciente_id  String
+  usuario_id   String
+  estado       EstadoCobro
+  metodo_pago  MetodoPago?
+  conceptos    CobroConcepto[]
+  paciente     Paciente          @relation(fields: [paciente_id], references: [id])
+  usuario      Usuario           @relation(fields: [usuario_id], references: [id])
+  historial    HistorialCobro[]
+  metodos_pago MetodoPagoCobro[]
+
+  @@map("cobros")
+}
+
+model CobroConcepto {
+  id              String      @id @default(uuid())
+  cantidad        Int
+  subtotal        Float
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+  cobro_id        String
+  consultorio_id  String
+  precio_unitario Float
+  servicio_id     String
+  cobro           Cobro       @relation(fields: [cobro_id], references: [id])
+  consultorio     Consultorio @relation(fields: [consultorio_id], references: [id])
+  servicio        Servicio    @relation(fields: [servicio_id], references: [id])
+
+  @@map("cobro_conceptos")
+}
+
+model HistorialCobro {
+  id               String     @id @default(uuid())
+  created_at       DateTime   @default(now())
+  cobro_id         String
+  detalles_antes   String?    // JSON como string en SQLite
+  detalles_despues String     // JSON como string en SQLite
+  tipo_cambio      TipoCambio
+  usuario_id       String
+  cobro            Cobro      @relation(fields: [cobro_id], references: [id])
+  usuario          Usuario    @relation(fields: [usuario_id], references: [id])
+
+  @@map("historial_cobros")
+}
+
+model Servicio {
+  id          String          @id @default(uuid())
+  nombre      String
+  descripcion String?
+  precio_base Float
+  created_at  DateTime        @default(now())
+  updated_at  DateTime        @updatedAt
+  conceptos   CobroConcepto[]
+
+  @@map("servicios")
+}
+
+model MetodoPagoCobro {
+  id          String     @id @default(uuid())
+  cobro_id    String
+  metodo_pago MetodoPago
+  monto       Float
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  cobro       Cobro      @relation(fields: [cobro_id], references: [id])
+
+  @@map("metodos_pago_cobro")
+}
+
+model citas {
+  id              String      @id @default(uuid())
+  fecha           DateTime
+  hora            String
+  estado          EstadoCita
+  notas           String?
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+  paciente_id     String
+  usuario_id      String
+  consultorio_id  String
+  paciente        Paciente    @relation(fields: [paciente_id], references: [id])
+  usuario         Usuario     @relation(fields: [usuario_id], references: [id])
+  consultorio     Consultorio @relation(fields: [consultorio_id], references: [id])
+
+  @@map("citas")
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+  DEPOSITO
+}
+
+enum EstadoCobro {
+  PENDIENTE
+  PAGADO
+  CANCELADO
+}
+
+enum Rol {
+  ADMINISTRADOR
+  DOCTOR
+  RECEPCIONISTA
+}
+
+enum TipoCambio {
+  CREACION
+  MODIFICACION
+  CANCELACION
+}
+
+enum EstadoCita {
+  PROGRAMADA
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
+} 
