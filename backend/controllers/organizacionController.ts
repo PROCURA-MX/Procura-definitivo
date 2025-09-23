@@ -154,4 +154,53 @@ export const getOrganizacionStats = asyncHandler(async (req: Request, res: Respo
     cobros,
     citas
   });
+});
+
+// Endpoint para obtener la organización actual del usuario autenticado
+export const getCurrentOrganizacion = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  
+  if (!userId) {
+    return res.status(401).json({ error: 'Usuario no autenticado' });
+  }
+  
+  try {
+    // Obtener el usuario con su organización (método robusto con Prisma)
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: userId },
+      include: {
+        organizacion: true
+      }
+    });
+    
+    if (!usuario || !usuario.organizacion) {
+      return res.status(404).json({ error: 'Organización no encontrada' });
+    }
+    
+    // Si el RFC no está en el schema de Prisma, obtenerlo con SQL directo
+    let rfc = null;
+    try {
+      const rfcResult = await prisma.$queryRaw`
+        SELECT rfc FROM organizaciones WHERE id = ${usuario.organizacion.id}
+      ` as any[];
+      
+      if (rfcResult && rfcResult.length > 0) {
+        rfc = rfcResult[0].rfc;
+      }
+    } catch (error) {
+      console.warn('Campo RFC no disponible en el schema de Prisma');
+    }
+    
+    // Retornar organización con RFC incluido
+    const organizacionCompleta = {
+      ...usuario.organizacion,
+      rfc: rfc || 'E0005' // RFC por defecto si no existe
+    };
+    
+    res.json(organizacionCompleta);
+    
+  } catch (error) {
+    console.error('Error obteniendo organización:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 }); 

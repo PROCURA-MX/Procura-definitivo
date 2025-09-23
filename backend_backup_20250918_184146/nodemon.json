@@ -1,0 +1,25 @@
+{
+  "watch": [
+    "index.ts",
+    "controllers/",
+    "routes/",
+    "services/",
+    "middleware/"
+  ],
+  "ext": "ts",
+  "ignore": [
+    "node_modules/",
+    "dist/",
+    "*.test.ts",
+    "*.spec.ts",
+    "logs/",
+    "*.log",
+    "**/*.css",
+    "**/*.json"
+  ],
+  "delay": "2000",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "exec": "ts-node --transpile-only index.ts"
+} 

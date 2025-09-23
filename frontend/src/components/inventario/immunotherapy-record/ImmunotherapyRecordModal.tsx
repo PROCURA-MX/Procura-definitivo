@@ -615,3 +615,34 @@ export function ImmunotherapyRecordModal({
     </Dialog>
   );
 }
+
+                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                            title="Ver detalles del tratamiento"
+                            onClick={() => {
+                              // Mostrar detalles del tratamiento en un alert informativo
+                              alert(`📋 DETALLES DEL TRATAMIENTO\n\n` +
+                                    `📅 Fecha: ${formatDateSafely(entry.fechaAplicacion)}\n` +
+                                    `💊 Tipo: ${entry.subtipo || 'N/A'}\n` +
+                                    `📊 Unidades: ${entry.unidades || 0}\n` +
+                                    `💉 Dosis: ${entry.dosis || 1}\n` +
+                                    `👨‍⚕️ Aplicado por: ${entry.aplicadoPor || 'N/A'}\n` +
+                                    `📧 Email: ${entry.aplicadoPorEmail || 'N/A'}\n` +
+                                    `🚨 Reacción: ${entry.tuvoReaccion ? entry.descripcionReaccion || 'Sí, sin descripción' : 'No'}\n` +
+                                    `🆔 ID: ${entry.id}`);
+                            }}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
+  );
+}

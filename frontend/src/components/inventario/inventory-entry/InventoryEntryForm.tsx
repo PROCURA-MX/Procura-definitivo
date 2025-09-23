@@ -766,3 +766,52 @@ export default function InventoryEntryForm() {
     </div>
   )
 } 
+          {entryProducts.map((prod, i) => (
+            <li key={i} className="flex justify-between items-center p-3 bg-white border rounded-lg">
+              <div>
+                <span className="font-medium text-gray-800">[{prod.category}] {prod.name}</span>
+                <div className="text-sm text-gray-600">
+                  Cantidad: {prod.totalMl || prod.quantity} {prod.totalMl ? 'ml' : 'frascos'} — Precio Unitario: ${prod.price}/frasco
+                  {prod.expiry && ` — Caducidad: ${prod.expiry}`}
+                  {prod.mlPerVial && ` — ml/frasco: ${prod.mlPerVial}`}
+                  {prod.totalMl && ` — Frascos: ${prod.quantity}`}
+                  {prod.totalMl && ` — Valor Total: $${(prod.quantity * prod.price).toFixed(2)}`}
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => handleRemoveProduct(i)}
+                className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Eliminar
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Botón de guardar */}
+      {entryProducts.length > 0 && (
+        <button 
+          type="button" 
+          onClick={handleSave} 
+          disabled={isSaving || mappingLoading || sedeId === 'loading' || entryProducts.some(p => p.productId.startsWith('fallback-'))}
+          className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500"
+        >
+          {isSaving ? 'Guardando...' : 'Registrar entrada'}
+        </button>
+      )}
+
+      {/* Mensaje de estado */}
+      {saveMessage && (
+        <div className={`p-3 rounded-md mt-4 ${
+          saveMessage.includes('Error') 
+            ? 'bg-red-50 text-red-700 border border-red-200' 
+            : 'bg-green-50 text-green-700 border border-green-200'
+        }`}>
+          {saveMessage}
+        </div>
+      )}
+    </div>
+  )
+} 

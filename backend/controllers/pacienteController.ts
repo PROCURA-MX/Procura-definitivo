@@ -199,7 +199,7 @@ export const deletePaciente = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
   await prisma.paciente.delete({ where: { id } });
   res.json({ message: 'Paciente eliminado' });
-}); 
+});
 
 export const searchPacientes = asyncHandler(async (req: Request, res: Response) => {
   const { q } = req.query;
@@ -246,4 +246,39 @@ export const searchPacientes = asyncHandler(async (req: Request, res: Response) 
   }
   
   res.json(pacientes);
-}); 
+});
+  
+  let pacientes;
+  if (organizacionId) {
+    console.log('🔍 Usando Prisma con filtro de organización');
+    // Filtrar por organización usando Prisma
+    pacientes = await prisma.paciente.findMany({
+      where: {
+        organizacion_id: organizacionId,
+        OR: [
+          { nombre: { startsWith: q, mode: 'insensitive' } },
+          { apellido: { startsWith: q, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
+      take: 10,
+    });
+    console.log('📋 Resultados Prisma con organización:', pacientes);
+  } else {
+    console.log('🔍 Usando Prisma sin filtro de organización');
+    // Sin filtro de organización (comportamiento original)
+    pacientes = await prisma.paciente.findMany({
+      where: {
+        OR: [
+          { nombre: { startsWith: q, mode: 'insensitive' } },
+          { apellido: { startsWith: q, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
+      take: 10,
+    });
+    console.log('📋 Resultados Prisma:', pacientes);
+  }
+  
+  res.json(pacientes);
+});
