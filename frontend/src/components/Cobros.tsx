@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { useForm, useFieldArray as useFieldArrayRH } from "react-hook-form";
 import { z } from "zod";
@@ -1058,6 +1058,9 @@ export default function Cobros({ embedded = false, periodoFiltro, fechaInicio, f
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Editar Cobro</DialogTitle>
+              <DialogDescription>
+                Modifica los datos del cobro seleccionado
+              </DialogDescription>
             </DialogHeader>
             <form
               onSubmit={async (e) => {
