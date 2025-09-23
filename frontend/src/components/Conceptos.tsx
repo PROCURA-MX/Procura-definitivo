@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useConceptos } from "../hooks/useConceptos";
 import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "./ui/dialog";
 import { useForm } from "react-hook-form";
+import ConceptoPredefinidoSelector from "./ConceptoPredefinidoSelector";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 export default function Conceptos({ embedded = false }: { embedded?: boolean }) {
   const { servicios, addServicio, isLoading: loading, error, editServicio, removeServicio: deleteServicio } = useConceptos();
+  const { currentUser } = useCurrentUser();
   const [showForm, setShowForm] = useState(false);
+  const [showPredefinedSelector, setShowPredefinedSelector] = useState(false);
   const [nombre, setNombre] = useState("");
   const [precio, setPrecio] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -48,6 +52,35 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handlePredefinedSelect = async (concepto: any, precio: number) => {
+    setFormLoading(true);
+    setFormError("");
+
+    try {
+      await addServicio({
+        nombre: concepto.nombre,
+        precio_base: precio,
+        descripcion: concepto.descripcion,
+        clave_sat: concepto.clave_sat,
+        clave_unidad: concepto.clave_unidad,
+        es_predefinido: true,
+      });
+
+      setSuccessMsg(`Concepto predefinido "${concepto.nombre}" agregado exitosamente`);
+      setShowPredefinedSelector(false);
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (error) {
+      setFormError("Error al agregar concepto predefinido");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleCreateCustom = () => {
+    setShowPredefinedSelector(false);
+    setShowForm(true);
   };
 
   const handleEdit = (concepto: any) => {
@@ -112,12 +145,14 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
     <div className={embedded ? "" : "w-full max-w-[1600px] pt-10"}>
       <div className="flex items-center justify-between mb-12">
         <h1 className="text-4xl font-extrabold text-[#4285f2]">Gestión de Conceptos</h1>
-        <Button
-          className="bg-[#4285f2] text-white h-14 px-10 rounded-xl shadow-lg hover:bg-[#4285f2]/90 transition text-2xl font-bold"
-          onClick={() => setShowForm(true)}
-        >
-          Nuevo concepto
-        </Button>
+        <div className="flex justify-center">
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white h-14 px-10 rounded-xl shadow-lg transition text-xl font-bold"
+            onClick={() => setShowPredefinedSelector(true)}
+          >
+            ➕ Agregar Nuevo Concepto
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-xl overflow-x-auto">
@@ -142,6 +177,7 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
                 <th className="border px-8 py-5 text-gray-700 text-lg">Descripción</th>
                 <th className="border px-8 py-5 text-gray-700 text-lg">Clave SAT</th>
                 <th className="border px-8 py-5 text-gray-700 text-lg">Clave Unidad</th>
+                <th className="border px-8 py-5 text-gray-700 text-lg">Tipo</th>
                 <th className="border px-8 py-5 text-gray-700 text-lg text-center">Acciones</th>
               </tr>
             </thead>
@@ -161,6 +197,17 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
                     <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-mono">
                       {servicio.clave_unidad || "-"}
                     </span>
+                  </td>
+                  <td className="border px-8 py-5 text-gray-900">
+                    {servicio.es_predefinido ? (
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                        📋 Predefinido
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-semibold">
+                        ✏️ Personalizado
+                      </span>
+                    )}
                   </td>
                   <td className="border px-8 py-5 text-center">
                     <Button
@@ -188,6 +235,9 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-[#4285f2]">Nuevo Concepto</DialogTitle>
+            <DialogDescription>
+              Crea un nuevo concepto personalizado para tus servicios médicos
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAdd} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -273,6 +323,9 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-[#4285f2]">Editar Concepto</DialogTitle>
+            <DialogDescription>
+              Modifica los datos del concepto seleccionado
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditSubmit(handleEditSave)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -357,6 +410,9 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-red-600">Confirmar Eliminación</DialogTitle>
+            <DialogDescription>
+              Esta acción eliminará permanentemente el concepto seleccionado
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <p className="text-lg">
@@ -380,6 +436,27 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
             >
               {deleteLoading ? "Eliminando..." : "Eliminar"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para selector de conceptos predefinidos */}
+      <Dialog open={showPredefinedSelector} onOpenChange={setShowPredefinedSelector}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold text-blue-600 mb-2">
+              📋 Seleccionar Concepto Predefinido
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 text-lg">
+              Elige de nuestra lista de conceptos predefinidos o crea uno personalizado
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6">
+            <ConceptoPredefinidoSelector
+              onSelectPredefined={handlePredefinedSelect}
+              onCreateCustom={handleCreateCustom}
+              placeholder="🔍 Buscar concepto predefinido..."
+            />
           </div>
         </DialogContent>
       </Dialog>

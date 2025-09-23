@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -174,6 +174,9 @@ export function PacienteAutocomplete({ value, onChange, onError }: PacienteAutoc
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Agregar Nuevo Paciente</DialogTitle>
+              <DialogDescription>
+                Ingresa los datos del nuevo paciente para agregarlo al sistema
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               {formError && (
