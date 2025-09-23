@@ -1,0 +1,8 @@
+prod-app/.env*
+prod-app/**/*.pem
+prod-app/**/*.key
+prod-app/**/*.crt
+prod-app/prisma/dev.db
+prod-app/dist/
+prod-app/**/*.backup
+prod-app/**/*.bak
