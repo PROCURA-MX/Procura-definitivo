@@ -6,7 +6,7 @@ import Cobros from "@/components/Cobros";
 import DashboardCharts from "@/components/DashboardCharts";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { FaMoneyBillWave, FaUserMd, FaCreditCard, FaUser, FaCashRegister, FaUniversity, FaQuestion, FaRegCheckSquare, FaClock, FaExclamationTriangle, FaCalendarAlt, FaFilter } from "react-icons/fa";
 import { DialogDatePicker } from "@/components/ui/dialog-date-picker";
 import { ConsultorioSelector } from "./ConsultorioSelector";
@@ -569,6 +569,14 @@ export default function Dashboard() {
       </div>
       <Dialog open={showConceptos} onOpenChange={v => setShowConceptos(v)}>
         <DialogContent className="max-w-6xl max-h-[90vh] p-10 rounded-2xl overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold text-blue-600 mb-2">
+              📋 Gestión de Conceptos
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 text-lg">
+              Administra los conceptos de cobro para tus servicios médicos
+            </DialogDescription>
+          </DialogHeader>
           <div className="h-full overflow-y-auto">
             <Conceptos embedded={true} />
           </div>
