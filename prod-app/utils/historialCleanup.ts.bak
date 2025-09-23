@@ -1,0 +1,295 @@
+// TEMPORARILY COMMENTED OUT DUE TO MISSING HISTORIAL MODELS IN SCHEMA
+/*
+import { prisma } from '../prisma';
+import { cacheService } from '../services/cacheService';
+
+interface CleanupStats {
+  deletedInventario: number;
+  deletedCalendario: number;
+  deletedUsuarios: number;
+  totalDeleted: number;
+}
+
+interface CleanupOptions {
+  maxAgeDays?: number;
+  maxRecords?: number;
+  dryRun?: boolean;
+}
+
+export async function cleanupHistorial(options: CleanupOptions = {}): Promise<CleanupStats> {
+  const {
+    maxAgeDays = 90,
+    maxRecords = 10000,
+    dryRun = false
+  } = options;
+
+  console.log(`🧹 Iniciando limpieza de historial con opciones:`, {
+    maxAgeDays,
+    maxRecords,
+    dryRun
+  });
+
+  try {
+    // Calcular fecha límite
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
+
+    let deletedInventario = 0;
+    let deletedCalendario = 0;
+    let deletedUsuarios = 0;
+
+    if (!dryRun) {
+      // Limpiar historial de inventario
+      const deletedInventarioResult = await prisma.historialInventario.deleteMany({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+      deletedInventario = deletedInventarioResult.count;
+
+      // Limpiar historial de calendario
+      const deletedCalendarioResult = await prisma.historialCalendario.deleteMany({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+      deletedCalendario = deletedCalendarioResult.count;
+
+      // Limpiar historial de usuarios
+      const deletedUsuariosResult = await prisma.historialUsuario.deleteMany({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+      deletedUsuarios = deletedUsuariosResult.count;
+    } else {
+      // En modo dry-run, solo contar registros que se eliminarían
+      const inventarioCount = await prisma.historialInventario.count({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+
+      const calendarioCount = await prisma.historialCalendario.count({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+
+      const usuariosCount = await prisma.historialUsuario.count({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+
+      deletedInventario = inventarioCount;
+      deletedCalendario = calendarioCount;
+      deletedUsuarios = usuariosCount;
+    }
+
+    const totalDeleted = deletedInventario + deletedCalendario + deletedUsuarios;
+
+    const stats: CleanupStats = {
+      deletedInventario,
+      deletedCalendario,
+      deletedUsuarios,
+      totalDeleted
+    };
+
+    console.log(`✅ Limpieza completada:`, stats);
+
+    // Limpiar caché relacionado
+    cacheService.delete('historial_estadisticas');
+    cacheService.delete('historial_overview');
+
+    return stats;
+  } catch (error) {
+    console.error('❌ Error durante la limpieza del historial:', error);
+    throw error;
+  }
+}
+
+export async function cleanupOldRecords(options: CleanupOptions = {}): Promise<CleanupStats> {
+  const {
+    maxAgeDays = 180,
+    maxRecords = 50000,
+    dryRun = false
+  } = options;
+
+  console.log(`🧹 Iniciando limpieza de registros antiguos con opciones:`, {
+    maxAgeDays,
+    maxRecords,
+    dryRun
+  });
+
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
+
+    let deletedInventario = 0;
+    let deletedCalendario = 0;
+    let deletedUsuarios = 0;
+
+    if (!dryRun) {
+      // Limpiar registros antiguos de inventario
+      const oldestInventario = await prisma.historialInventario.findMany({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        },
+        orderBy: {
+          createdAt: 'asc'
+        },
+        take: maxRecords
+      });
+
+      if (oldestInventario.length > 0) {
+        await prisma.historialInventario.deleteMany({
+          where: {
+            id: {
+              in: oldestInventario.map(record => record.id)
+            }
+          }
+        });
+        deletedInventario = oldestInventario.length;
+      }
+
+      // Limpiar registros antiguos de calendario
+      const oldestCalendario = await prisma.historialCalendario.findMany({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        },
+        orderBy: {
+          createdAt: 'asc'
+        },
+        take: maxRecords
+      });
+
+      if (oldestCalendario.length > 0) {
+        await prisma.historialCalendario.deleteMany({
+          where: {
+            id: {
+              in: oldestCalendario.map(record => record.id)
+            }
+          }
+        });
+        deletedCalendario = oldestCalendario.length;
+      }
+
+      // Limpiar registros antiguos de usuarios
+      const oldestUsuarios = await prisma.historialUsuario.findMany({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        },
+        orderBy: {
+          createdAt: 'asc'
+        },
+        take: maxRecords
+      });
+
+      if (oldestUsuarios.length > 0) {
+        await prisma.historialUsuario.deleteMany({
+          where: {
+            id: {
+              in: oldestUsuarios.map(record => record.id)
+            }
+          }
+        });
+        deletedUsuarios = oldestUsuarios.length;
+      }
+    } else {
+      // En modo dry-run, solo contar registros que se eliminarían
+      const inventarioCount = await prisma.historialInventario.count({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+
+      const calendarioCount = await prisma.historialCalendario.count({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+
+      const usuariosCount = await prisma.historialUsuario.count({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+
+      deletedInventario = Math.min(inventarioCount, maxRecords);
+      deletedCalendario = Math.min(calendarioCount, maxRecords);
+      deletedUsuarios = Math.min(usuariosCount, maxRecords);
+    }
+
+    const totalDeleted = deletedInventario + deletedCalendario + deletedUsuarios;
+
+    const stats: CleanupStats = {
+      deletedInventario,
+      deletedCalendario,
+      deletedUsuarios,
+      totalDeleted
+    };
+
+    console.log(`✅ Limpieza de registros antiguos completada:`, stats);
+
+    // Limpiar caché relacionado
+    cacheService.delete('historial_estadisticas');
+    cacheService.delete('historial_overview');
+
+    return stats;
+  } catch (error) {
+    console.error('❌ Error durante la limpieza de registros antiguos:', error);
+    throw error;
+  }
+}
+
+export function scheduleHistorialCleanup(): void {
+  console.log('⏰ Programando limpieza automática del historial...');
+
+  // Limpiar cada día a las 2:00 AM
+  const cronExpression = '0 2 * * *';
+  
+  // Importar node-cron dinámicamente para evitar errores de compilación
+  try {
+    const cron = require('node-cron');
+    
+    cron.schedule(cronExpression, async () => {
+      console.log('🧹 Ejecutando limpieza automática del historial...');
+      try {
+        await cleanupHistorial({ maxAgeDays: 90, dryRun: false });
+        console.log('✅ Limpieza automática completada');
+      } catch (error) {
+        console.error('❌ Error en limpieza automática:', error);
+      }
+    });
+
+    console.log(`✅ Limpieza automática programada con cron: ${cronExpression}`);
+  } catch (error) {
+    console.error('❌ No se pudo programar la limpieza automática:', error);
+  }
+}
+*/

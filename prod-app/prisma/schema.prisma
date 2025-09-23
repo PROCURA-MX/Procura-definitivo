@@ -1,0 +1,808 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organizacion {
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre           String        @db.VarChar(255)
+  ruc              String?       @db.VarChar(20)
+  direccion        String?
+  telefono         String?       @db.VarChar(20)
+  email            String?       @db.VarChar(255)
+  logo_url         String?
+  color_primario   String?       @default("#3B82F6") @db.VarChar(7)
+  color_secundario String?       @default("#1F2937") @db.VarChar(7)
+  created_at       DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?     @default(now()) @updatedAt @db.Timestamp(6)
+  consultorios     Consultorio[]
+  pacientes        Paciente[]
+  servicios        Servicio[]
+  usuarios         Usuario[]
+  sedes            Sede[]
+  products         Product[]
+  movements        Movement[]
+  stockBySede      StockBySede[]
+  immunotherapyRecords ImmunotherapyRecord[]
+
+  @@map("organizaciones")
+}
+
+model Paciente {
+  id                  String            @id @default(uuid())
+  nombre              String
+  fecha_nacimiento    DateTime
+  genero              String
+  direccion           String?
+  telefono            String
+  email               String
+  documento_identidad String?
+  created_at          DateTime          @default(now())
+  updated_at          DateTime          @updatedAt
+  apellido            String
+  organizacion_id     String            @db.Uuid
+  InventoryUsage      InventoryUsage[]
+  citas               citas[]
+  cobros              Cobro[]
+  emailMessages       email_messages[]
+  organizacion        Organizacion      @relation(fields: [organizacion_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_pacientes_organizacion")
+  whatsappMessages    WhatsAppMessage[]
+  immunotherapyRecords ImmunotherapyRecord[]
+
+  @@unique([email, organizacion_id], map: "unique_paciente_email_organizacion")
+  @@unique([telefono, organizacion_id], map: "unique_paciente_telefono_organizacion")
+  @@index([email, organizacion_id], map: "idx_pacientes_email_organizacion")
+  @@index([nombre, apellido], map: "idx_pacientes_nombre_apellido")
+  @@index([organizacion_id, nombre], map: "idx_pacientes_org_nombre")
+  @@index([organizacion_id], map: "idx_pacientes_organizacion_id")
+  @@map("pacientes")
+}
+
+model Usuario {
+  id                         String                 @id @default(uuid())
+  nombre                     String
+  email                      String                 @unique
+  telefono                   String
+  created_at                 DateTime               @default(now())
+  updated_at                 DateTime               @updatedAt
+  rol                        Rol
+  apellido                   String
+  consultorio_id             String
+  googleAccessToken          String?
+  googleRefreshToken         String?
+  googleTokenExpiry          DateTime?              @db.Timestamp(6)
+  googleCalendarId           String?
+  organizacion_id            String                 @db.Uuid
+  puede_editar_cobros        Boolean                @default(false)
+  puede_eliminar_cobros      Boolean                @default(false)
+  puede_gestionar_usuarios   Boolean                @default(false)
+  puede_ver_historial        Boolean                @default(false)
+  password                   String?                @db.VarChar(255)
+  puede_gestionar_calendario Boolean                @default(false)
+  puede_gestionar_inventario Boolean?               @default(false)
+  puede_crear_facturas       Boolean?               @default(false)
+  puede_ver_facturas         Boolean?               @default(false)
+  citas                      citas[]
+  cobros                     Cobro[]
+  disponibilidades           DisponibilidadMedico[] @relation("UsuarioDisponibilidad")
+  emailMessages              email_messages[]
+  historial                  HistorialCobro[]
+  organizacion               Organizacion           @relation(fields: [organizacion_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuarios_organizacion")
+  consultorio                Consultorio            @relation(fields: [consultorio_id], references: [id])
+  immunotherapyRecords       ImmunotherapyRecord[]
+  immunotherapyLogs          ImmunotherapyLog[]
+  whatsappConfig             WhatsAppConfig?
+  whatsappMessages           WhatsAppMessage[]
+  whatsappReminders          WhatsAppReminder[]
+  whatsappTemplates          WhatsAppTemplate[]
+
+  @@unique([email, organizacion_id], map: "unique_usuario_email_organizacion")
+  @@index([consultorio_id], map: "idx_usuarios_consultorio_id")
+  @@index([email, organizacion_id], map: "idx_usuarios_email_organizacion")
+  @@index([organizacion_id, email], map: "idx_usuarios_org_email")
+  @@index([organizacion_id], map: "idx_usuarios_organizacion_id")
+  @@map("usuarios")
+}
+
+model Consultorio {
+  id                     String                  @id @default(uuid())
+  nombre                 String
+  direccion              String
+  created_at             DateTime                @default(now())
+  updated_at             DateTime                @updatedAt
+  organizacion_id        String                  @db.Uuid
+  citas                  citas[]
+  conceptos              CobroConcepto[]
+  configuracion_permisos configuracion_permisos?
+  organizacion           Organizacion            @relation(fields: [organizacion_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_consultorios_organizacion")
+  precios                PrecioConsultorio[]
+  usuarios               Usuario[]
+  sedes                  Sede[]
+  movements              Movement[]
+
+  @@index([organizacion_id], map: "idx_consultorios_organizacion_id")
+  @@map("consultorios")
+}
+
+model PrecioConsultorio {
+  id             String      @id @default(uuid())
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+  concepto       String
+  consultorio_id String
+  precio         Float
+  consultorio    Consultorio @relation(fields: [consultorio_id], references: [id])
+
+  @@map("precios_consultorio")
+}
+
+model Cobro {
+  id            String            @id @default(uuid())
+  fecha_cobro   DateTime
+  monto_total   Float
+  notas         String?
+  created_at    DateTime          @default(now())
+  updated_at    DateTime          @updatedAt
+  paciente_id   String
+  usuario_id    String
+  estado        EstadoCobro
+  metodo_pago   MetodoPago?
+  conceptos     CobroConcepto[]
+  paciente      Paciente          @relation(fields: [paciente_id], references: [id])
+  usuario       Usuario           @relation(fields: [usuario_id], references: [id])
+  emailMessages email_messages[]
+  historial     HistorialCobro[]
+  metodos_pago  MetodoPagoCobro[]
+
+  @@index([estado], map: "idx_cobros_estado")
+  @@index([fecha_cobro(sort: Desc)], map: "idx_cobros_fecha_cobro")
+  @@index([paciente_id], map: "idx_cobros_paciente_id")
+  @@index([usuario_id], map: "idx_cobros_usuario_id")
+  @@map("cobros")
+}
+
+model CobroConcepto {
+  id              String      @id @default(uuid())
+  cantidad        Int
+  subtotal        Float
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+  cobro_id        String
+  consultorio_id  String
+  precio_unitario Float
+  servicio_id     String
+  cobro           Cobro       @relation(fields: [cobro_id], references: [id])
+  consultorio     Consultorio @relation(fields: [consultorio_id], references: [id])
+  servicio        Servicio    @relation(fields: [servicio_id], references: [id])
+
+  @@index([cobro_id], map: "idx_cobro_conceptos_cobro_id")
+  @@index([consultorio_id], map: "idx_cobro_conceptos_consultorio_id")
+  @@index([servicio_id], map: "idx_cobro_conceptos_servicio_id")
+  @@map("cobro_conceptos")
+}
+
+model HistorialCobro {
+  id               String     @id @default(uuid())
+  created_at       DateTime   @default(now())
+  cobro_id         String
+  detalles_antes   Json?
+  detalles_despues Json
+  tipo_cambio      TipoCambio
+  usuario_id       String
+  organizacion_id  String?    @db.VarChar(255)
+  cobro            Cobro      @relation(fields: [cobro_id], references: [id])
+  usuario          Usuario    @relation(fields: [usuario_id], references: [id])
+
+  @@index([cobro_id], map: "idx_historial_cobros_cobro_id")
+  @@index([created_at(sort: Desc)], map: "idx_historial_cobros_created_at")
+  @@map("historial_cobros")
+}
+
+model Servicio {
+  id              String          @id @default(uuid())
+  nombre          String
+  descripcion     String?
+  precio_base     Float
+  clave_sat       String?         @db.VarChar(50)
+  clave_unidad    String?         @db.VarChar(50)
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+  organizacion_id String          @db.Uuid
+  conceptos       CobroConcepto[]
+  organizacion    Organizacion    @relation(fields: [organizacion_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_servicios_organizacion")
+
+  @@index([organizacion_id, nombre], map: "idx_servicios_org_nombre")
+  @@index([organizacion_id], map: "idx_servicios_organizacion_id")
+  @@map("servicios")
+}
+
+model MetodoPagoCobro {
+  id          String     @id @default(uuid())
+  cobro_id    String
+  metodo_pago MetodoPago
+  monto       Float
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  cobro       Cobro      @relation(fields: [cobro_id], references: [id])
+
+  @@index([cobro_id], map: "idx_metodos_pago_cobro_cobro_id")
+  @@map("metodos_pago_cobro")
+}
+
+model Allergen {
+  id                String            @id
+  name              String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  alxoidType        AlxoidType?
+  isAlxoidExclusive Boolean           @default(false)
+  ProductAllergen   ProductAllergen[]
+
+  @@index([alxoidType])
+  @@index([isAlxoidExclusive])
+  @@index([name])
+}
+
+model InventoryUsage {
+  id                   String                 @id
+  nombrePaciente       String
+  tipoTratamiento      TipoTratamiento
+  observaciones        String?
+  tuvoReaccion         Boolean
+  descripcionReaccion  String?
+  createdAt            DateTime               @default(now())
+  sedeId               String
+  consultorioId        String?
+  updatedAt            DateTime
+  userId               String
+  pacienteId           String?
+  organizacion_id      String?                @db.VarChar(255)
+  pacientes            Paciente?              @relation(fields: [pacienteId], references: [id])
+  Sede                 Sede                   @relation(fields: [sedeId], references: [id])
+  InventoryUsageDetail InventoryUsageDetail[]
+
+  @@index([sedeId])
+  @@index([userId])
+  @@index([pacienteId])
+  @@index([consultorioId])
+}
+
+model InventoryUsageDetail {
+  id               String         @id
+  createdAt        DateTime       @default(now())
+  doses            Int?
+  frascoLevel      Int?
+  inventoryUsageId String
+  movementId       String?
+  productId        String
+  quantity         Decimal        @db.Decimal(10, 2)
+  totalCost        Decimal        @db.Decimal(10, 2)
+  unitCost         Decimal        @db.Decimal(10, 2)
+  units            Int?
+  updatedAt        DateTime
+  organizacion_id  String?        @db.VarChar(255)
+  InventoryUsage   InventoryUsage @relation(fields: [inventoryUsageId], references: [id])
+  Movement         Movement?      @relation(fields: [movementId], references: [id])
+  Product          Product        @relation(fields: [productId], references: [id])
+
+  @@index([inventoryUsageId])
+  @@index([movementId])
+  @@index([productId])
+}
+
+model Movement {
+  id                   String                 @id
+  userId               String
+  sedeId               String
+  consultorioId        String?                @db.Uuid
+  productId            String
+  type                 MovementType
+  quantity             Decimal                @db.Decimal(10, 2)
+  unitCost             Decimal                @db.Decimal(10, 2)
+  totalCost            Decimal                @db.Decimal(10, 2)
+  batchNumber          String?
+  expiryDate           DateTime?
+  createdAt            DateTime               @default(now())
+  organizacion_id      String?                @db.VarChar(255)
+  Organizacion         Organizacion?          @relation(fields: [organizacion_id], references: [id])
+  Consultorio          Consultorio?           @relation(fields: [consultorioId], references: [id])
+  InventoryUsageDetail InventoryUsageDetail[]
+  Product              Product                @relation(fields: [productId], references: [id])
+  Sede                 Sede                   @relation(fields: [sedeId], references: [id])
+
+  @@index([batchNumber])
+  @@index([createdAt])
+  @@index([expiryDate])
+  @@index([productId])
+  @@index([sedeId])
+  @@index([userId])
+  @@index([consultorioId])
+}
+
+model Product {
+  id                   String                 @id
+  name                 String
+  type                 ProductType
+  unit                 ProductUnit
+  description          String?
+  costPerUnit          Decimal                @db.Decimal(10, 2)
+  minStockLevel        Int
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  category             String?
+  organizacion_id      String?                @db.VarChar(255)
+  Organizacion         Organizacion?          @relation(fields: [organizacion_id], references: [id])
+  InventoryUsageDetail InventoryUsageDetail[]
+  Movement             Movement[]
+  ProductAllergen      ProductAllergen[]
+  ProductExpiration    ProductExpiration[]
+  StockBySede          StockBySede[]
+
+  @@index([name])
+}
+
+model ProductAllergen {
+  id         String   @id
+  productId  String
+  allergenId String
+  mlPerDose  Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  Allergen   Allergen @relation(fields: [allergenId], references: [id])
+  Product    Product  @relation(fields: [productId], references: [id])
+
+  @@unique([productId, allergenId])
+  @@index([allergenId])
+  @@index([productId])
+}
+
+model ProductExpiration {
+  id          String   @id
+  productId   String
+  sedeId      String
+  batchNumber String
+  expiryDate  DateTime
+  quantity    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  Product     Product  @relation(fields: [productId], references: [id])
+  Sede        Sede     @relation(fields: [sedeId], references: [id])
+
+  @@index([batchNumber])
+  @@index([expiryDate])
+  @@index([productId])
+  @@index([sedeId])
+}
+
+model Sede {
+  id                String              @id
+  name              String
+  address           String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  consultorio_id    String?             @db.VarChar(255)
+  organizacion_id   String?             @db.VarChar(255)
+  Consultorio       Consultorio?        @relation(fields: [consultorio_id], references: [id])
+  Organizacion      Organizacion?       @relation(fields: [organizacion_id], references: [id])
+  InventoryUsage    InventoryUsage[]
+  Movement          Movement[]
+  ProductExpiration ProductExpiration[]
+  StockBySede       StockBySede[]
+  User              User[]
+}
+
+model StockBySede {
+  id             String        @id
+  productId      String
+  sedeId         String
+  quantity       Decimal       @db.Decimal(10, 2)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime
+  organizacion_id String?      @db.VarChar(255)
+  Organizacion   Organizacion? @relation(fields: [organizacion_id], references: [id])
+  Product        Product       @relation(fields: [productId], references: [id])
+  Sede           Sede          @relation(fields: [sedeId], references: [id])
+
+  @@unique([productId, sedeId])
+  @@index([productId])
+  @@index([sedeId])
+  @@index([organizacion_id])
+}
+
+model Supplier {
+  id             String   @id
+  name           String
+  invoiceNumber  String?
+  amountSupplied Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+
+  @@index([invoiceNumber])
+  @@index([name])
+}
+
+model citas {
+  id                String             @id
+  titulo            String?
+  descripcion       String?
+  estado            EstadoCita
+  paciente_id       String
+  usuario_id        String
+  consultorio_id    String
+  created_at        DateTime           @default(now())
+  updated_at        DateTime
+  color             String?            @default("#3B82F6")
+  fecha_fin         DateTime
+  fecha_inicio      DateTime
+  es_recurrente     Boolean?           @default(false)
+  regla_recurrencia String?
+  id_serie          String?
+  googleEventId     String?
+  exdates           Json?
+  consultorios      Consultorio        @relation(fields: [consultorio_id], references: [id])
+  pacientes         Paciente           @relation(fields: [paciente_id], references: [id])
+  usuarios          Usuario            @relation(fields: [usuario_id], references: [id])
+  emailMessages     email_messages[]
+  whatsappMessages  WhatsAppMessage[]
+  whatsappReminders WhatsAppReminder[]
+
+  @@index([consultorio_id], map: "idx_citas_consultorio_id")
+  @@index([fecha_fin], map: "idx_citas_fecha_fin")
+  @@index([fecha_inicio], map: "idx_citas_fecha_inicio")
+  @@index([paciente_id], map: "idx_citas_paciente_id")
+  @@index([usuario_id], map: "idx_citas_usuario_id")
+}
+
+model DisponibilidadMedico {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id  String
+  dia_semana  Int
+  hora_inicio String  @db.VarChar(5)
+  hora_fin    String  @db.VarChar(5)
+  usuario     Usuario @relation("UsuarioDisponibilidad", fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_disponibilidad")
+
+  @@index([dia_semana], map: "idx_disponibilidad_medico_dia_semana")
+  @@index([usuario_id], map: "idx_disponibilidad_medico_usuario_id")
+  @@map("disponibilidad_medico")
+}
+
+model BloqueoMedico {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id   String
+  fecha_inicio DateTime @db.Timestamp(6)
+  fecha_fin    DateTime @db.Timestamp(6)
+  motivo       String?  @db.VarChar(255)
+
+  @@index([fecha_fin], map: "idx_bloqueo_medico_fecha_fin")
+  @@index([fecha_inicio], map: "idx_bloqueo_medico_fecha_inicio")
+  @@index([usuario_id], map: "idx_bloqueo_medico_usuario_id")
+  @@map("bloqueo_medico")
+}
+
+model WhatsAppConfig {
+  id                   String   @id @default(uuid())
+  usuario_id           String   @unique
+  whatsapp_business_id String?
+  phone_number_id      String?
+  access_token         String?
+  webhook_verify_token String?
+  is_active            Boolean  @default(false)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+  usuario              Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_config")
+}
+
+model WhatsAppTemplate {
+  id         String   @id @default(uuid())
+  usuario_id String
+  name       String
+  language   String   @default("es")
+  category   String
+  components Json
+  status     String   @default("PENDING")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  usuario    Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_templates")
+}
+
+model WhatsAppMessage {
+  id                  String                @id @default(uuid())
+  usuario_id          String
+  paciente_id         String?
+  cita_id             String?
+  template_name       String?
+  message_type        String
+  content             Json
+  phone_number        String
+  status              WhatsAppMessageStatus
+  whatsapp_message_id String?
+  error_message       String?
+  sent_at             DateTime?
+  delivered_at        DateTime?
+  read_at             DateTime?
+  created_at          DateTime              @default(now())
+  updated_at          DateTime              @updatedAt
+  cita                citas?                @relation(fields: [cita_id], references: [id])
+  paciente            Paciente?             @relation(fields: [paciente_id], references: [id])
+  usuario             Usuario               @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_messages")
+}
+
+model WhatsAppReminder {
+  id             String    @id @default(uuid())
+  usuario_id     String
+  cita_id        String
+  template_name  String
+  reminder_type  String
+  scheduled_time DateTime
+  is_sent        Boolean   @default(false)
+  sent_at        DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  cita           citas     @relation(fields: [cita_id], references: [id], onDelete: Cascade)
+  usuario        Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_reminders")
+}
+
+model configuracion_permisos {
+  id                             String      @id
+  consultorio_id                 String      @unique
+  secretaria_editar_cobros       Boolean     @default(false)
+  secretaria_eliminar_cobros     Boolean     @default(false)
+  enfermera_entradas_inventario  Boolean     @default(true)
+  enfermera_salidas_inventario   Boolean     @default(true)
+  secretaria_entradas_inventario Boolean     @default(true)
+  secretaria_salidas_inventario  Boolean     @default(false)
+  created_at                     DateTime    @default(now())
+  updated_at                     DateTime
+  consultorios                   Consultorio @relation(fields: [consultorio_id], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id        String   @id
+  email     String   @unique
+  name      String
+  role      UserRole
+  sedeId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Sede      Sede     @relation(fields: [sedeId], references: [id])
+
+  @@index([sedeId])
+}
+
+model email_messages {
+  id               String             @id @default(uuid())
+  usuario_id       String
+  paciente_id      String?
+  cita_id          String?
+  cobro_id         String?
+  template_name    String?
+  message_type     String
+  content          Json
+  email_address    String
+  status           EmailMessageStatus
+  email_message_id String?
+  error_message    String?
+  sent_at          DateTime?
+  delivered_at     DateTime?
+  read_at          DateTime?
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @updatedAt
+  citas            citas?             @relation(fields: [cita_id], references: [id])
+  cobros           Cobro?             @relation(fields: [cobro_id], references: [id])
+  pacientes        Paciente?          @relation(fields: [paciente_id], references: [id])
+  usuarios         Usuario            @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@map("email_messages")
+}
+
+model suscripciones {
+  id                String            @id
+  organizacion_id   String            @db.Uuid
+  tipo              TipoSuscripcion
+  estado            EstadoSuscripcion @default(PENDIENTE_PAGO)
+  precio            Float
+  fecha_inicio      DateTime          @default(now())
+  fecha_vencimiento DateTime
+  fecha_cancelacion DateTime?
+  metodo_pago       String?           @db.VarChar(50)
+  transaccion_id    String?           @db.VarChar(255)
+  notas             String?
+  created_at        DateTime          @default(now())
+  updated_at        DateTime
+
+  @@index([estado], map: "idx_suscripciones_estado")
+  @@index([fecha_vencimiento], map: "idx_suscripciones_fecha_vencimiento")
+  @@index([organizacion_id], map: "idx_suscripciones_organizacion_id")
+}
+
+model sede {
+  id              String    @id @db.VarChar(255)
+  name            String    @db.VarChar(255)
+  address         String    @db.VarChar(255)
+  createdAt       DateTime? @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime? @default(now()) @db.Timestamp(6)
+  consultorio_id  String?   @db.VarChar(255)
+  organizacion_id String?   @db.VarChar(255)
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA_DEBITO
+  TARJETA_CREDITO
+  TRANSFERENCIA
+  OTRO
+}
+
+enum EstadoCobro {
+  PENDIENTE
+  COMPLETADO
+  CANCELADO
+}
+
+enum Rol {
+  DOCTOR
+  SECRETARIA
+  ADMINISTRADOR
+  ENFERMERA
+  PACIENTE
+}
+
+enum TipoCambio {
+  CREACION
+  EDICION
+  ELIMINACION
+  ACTUALIZACION
+}
+
+enum AlxoidType {
+  A
+  B
+}
+
+enum EstadoCita {
+  PROGRAMADA
+  EN_CURSO
+  COMPLETADA
+  CANCELADA
+  NO_ASISTIO
+}
+
+enum MovementType {
+  ENTRY
+  EXIT
+}
+
+enum ProductType {
+  SIMPLE
+  COMPLEX
+}
+
+enum ProductUnit {
+  ML
+  PIECE
+}
+
+enum TipoTratamiento {
+  INMUNOTERAPIA
+  PRUEBAS
+  GAMMAGLOBULINA
+  VACUNAS_PEDIATRICAS
+  MEDICAMENTOS_EXTRAS
+  CONSULTA
+}
+
+enum UserRole {
+  DOCTOR
+  NURSE
+  SECRETARY
+}
+
+enum WhatsAppMessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum EmailMessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum EstadoSuscripcion {
+  ACTIVA
+  VENCIDA
+  CANCELADA
+  PENDIENTE_PAGO
+}
+
+enum TipoSuscripcion {
+  MENSUAL
+  ANUAL
+}
+
+enum estadosuscripcion {
+  ACTIVA
+  VENCIDA
+  CANCELADA
+  PENDIENTE_PAGO
+}
+
+model ImmunotherapyRecord {
+  id                    String                @id @default(uuid())
+  pacienteId            String
+  organizacionId        String
+  sedeId                String?
+  ultimoEditorId        String?
+  editadoPor            String?
+  fechaInicio           DateTime?
+  fechaInicioOriginal   DateTime?
+  fechaUltimaAplicacion DateTime?
+  ultimaEdicion         DateTime?
+  dosisActual           String?
+  frecuencia            String?
+  tipoTratamiento       String?
+  alergenos             String[]
+  observaciones         String?
+  estado                String?               @default("ACTIVO")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  
+  // Relaciones
+  paciente              Paciente              @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  organizacion          Organizacion          @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  ultimoEditor          Usuario?              @relation(fields: [ultimoEditorId], references: [id])
+  logs                  ImmunotherapyLog[]
+  
+  @@unique([pacienteId, organizacionId], name: "pacienteId_organizacionId")
+  @@map("immunotherapy_records")
+}
+
+model ImmunotherapyLog {
+  id                    String                @id @default(uuid())
+  recordId              String
+  userId                String?
+  tipoTratamiento       String?
+  subtipo               String?
+  unidades              Int?
+  dosis                 String?
+  alergenos             String[]
+  medicamentoReaccion   Json?
+  reaccion              Boolean               @default(false)
+  descripcionReaccion   String?
+  frascos               Json?
+  productId             String?
+  fechaAplicacion       DateTime              @default(now())
+  observaciones         String?
+  inventoryUsageId      String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  
+  // Relaciones
+  record                ImmunotherapyRecord   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  user                  Usuario?              @relation(fields: [userId], references: [id])
+  
+  @@map("immunotherapy_logs")
+}
+
+
+enum tiposuscripcion {
+  MENSUAL
+  ANUAL
+}
