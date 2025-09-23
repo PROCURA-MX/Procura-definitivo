@@ -57,4 +57,5 @@ Inventario/
 # Excluir archivos de prueba y desarrollo
 *.test.js
 *.spec.js
-test-results/ 
+test-results/ backend/.env.bak
+backend/test.pdf
