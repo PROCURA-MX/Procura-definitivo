@@ -1,0 +1,423 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Paciente {
+  id                  String   @id @default(uuid())
+  nombre              String
+  fecha_nacimiento    DateTime
+  genero              String
+  direccion           String?
+  telefono            String
+  email               String
+  documento_identidad String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+  apellido            String
+  citas               citas[]
+  cobros              Cobro[]
+  InventoryUsage      InventoryUsage[]
+
+  @@map("pacientes")
+}
+
+model Usuario {
+  id         String           @id @default(uuid())
+  nombre     String
+  apellido   String
+  email      String   @unique
+  telefono   String
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+  rol        Rol
+  consultorio_id String
+  consultorio    Consultorio  @relation(fields: [consultorio_id], references: [id])
+  citas      citas[]
+  cobros     Cobro[]
+  historial  HistorialCobro[]
+
+  @@map("usuarios")
+}
+
+model Consultorio {
+  id         String              @id @default(uuid())
+  nombre     String
+  direccion  String
+  created_at DateTime            @default(now())
+  updated_at DateTime            @updatedAt
+  citas      citas[]
+  conceptos  CobroConcepto[]
+  precios    PrecioConsultorio[]
+  usuarios   Usuario[]
+
+  @@map("consultorios")
+}
+
+model PrecioConsultorio {
+  id             String      @id @default(uuid())
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+  concepto       String
+  consultorio_id String
+  precio         Float
+  consultorio    Consultorio @relation(fields: [consultorio_id], references: [id])
+
+  @@map("precios_consultorio")
+}
+
+model Cobro {
+  id           String            @id @default(uuid())
+  fecha_cobro  DateTime
+  monto_total  Float
+  notas        String?
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
+  paciente_id  String
+  usuario_id   String
+  estado       EstadoCobro
+  metodo_pago  MetodoPago?
+  conceptos    CobroConcepto[]
+  paciente     Paciente          @relation(fields: [paciente_id], references: [id])
+  usuario      Usuario           @relation(fields: [usuario_id], references: [id])
+  historial    HistorialCobro[]
+  metodos_pago MetodoPagoCobro[]
+
+  @@map("cobros")
+}
+
+model CobroConcepto {
+  id              String      @id @default(uuid())
+  cantidad        Int
+  subtotal        Float
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+  cobro_id        String
+  consultorio_id  String
+  precio_unitario Float
+  servicio_id     String
+  cobro           Cobro       @relation(fields: [cobro_id], references: [id])
+  consultorio     Consultorio @relation(fields: [consultorio_id], references: [id])
+  servicio        Servicio    @relation(fields: [servicio_id], references: [id])
+
+  @@map("cobro_conceptos")
+}
+
+model HistorialCobro {
+  id               String     @id @default(uuid())
+  created_at       DateTime   @default(now())
+  cobro_id         String
+  detalles_antes   Json?
+  detalles_despues Json
+  tipo_cambio      TipoCambio
+  usuario_id       String
+  cobro            Cobro      @relation(fields: [cobro_id], references: [id])
+  usuario          Usuario    @relation(fields: [usuario_id], references: [id])
+
+  @@map("historial_cobros")
+}
+
+model Servicio {
+  id          String          @id @default(uuid())
+  nombre      String
+  descripcion String?
+  precio_base Float
+  created_at  DateTime        @default(now())
+  updated_at  DateTime        @updatedAt
+  conceptos   CobroConcepto[]
+
+  @@map("servicios")
+}
+
+model MetodoPagoCobro {
+  id          String     @id @default(uuid())
+  cobro_id    String
+  metodo_pago MetodoPago
+  monto       Float
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  cobro       Cobro      @relation(fields: [cobro_id], references: [id])
+
+  @@map("metodos_pago_cobro")
+}
+
+model Allergen {
+  id                String            @id
+  name              String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  alxoidType        AlxoidType?
+  isAlxoidExclusive Boolean           @default(false)
+  ProductAllergen   ProductAllergen[]
+
+  @@index([alxoidType])
+  @@index([isAlxoidExclusive])
+  @@index([name])
+}
+
+model InventoryUsage {
+  id                   String                 @id
+  nombrePaciente       String
+  pacienteId           String?                // Opcional para compatibilidad
+  tipoTratamiento      TipoTratamiento
+  observaciones        String?
+  tuvoReaccion         Boolean
+  descripcionReaccion  String?
+  createdAt            DateTime               @default(now())
+  sedeId               String
+  updatedAt            DateTime
+  userId               String
+  Sede                 Sede                   @relation(fields: [sedeId], references: [id])
+  User                 User                   @relation(fields: [userId], references: [id])
+  Paciente             Paciente?              @relation(fields: [pacienteId], references: [id])
+  InventoryUsageDetail InventoryUsageDetail[]
+
+  @@index([sedeId])
+  @@index([userId])
+  @@index([pacienteId])
+}
+
+model InventoryUsageDetail {
+  id               String         @id
+  createdAt        DateTime       @default(now())
+  doses            Int?
+  frascoLevel      Int?
+  inventoryUsageId String
+  movementId       String?
+  productId        String
+  quantity         Decimal        @db.Decimal(10, 2)
+  totalCost        Decimal        @db.Decimal(10, 2)
+  unitCost         Decimal        @db.Decimal(10, 2)
+  units            Int?
+  updatedAt        DateTime
+  InventoryUsage   InventoryUsage @relation(fields: [inventoryUsageId], references: [id])
+  Movement         Movement?      @relation(fields: [movementId], references: [id])
+  Product          Product        @relation(fields: [productId], references: [id])
+
+  @@index([inventoryUsageId])
+  @@index([movementId])
+  @@index([productId])
+}
+
+model Movement {
+  id                   String                 @id
+  userId               String
+  sedeId               String
+  productId            String
+  type                 MovementType
+  quantity             Decimal                @db.Decimal(10, 2)
+  unitCost             Decimal                @db.Decimal(10, 2)
+  totalCost            Decimal                @db.Decimal(10, 2)
+  batchNumber          String?
+  expiryDate           DateTime?
+  createdAt            DateTime               @default(now())
+  InventoryUsageDetail InventoryUsageDetail[]
+  Product              Product                @relation(fields: [productId], references: [id])
+  Sede                 Sede                   @relation(fields: [sedeId], references: [id])
+  User                 User                   @relation(fields: [userId], references: [id])
+
+  @@index([batchNumber])
+  @@index([createdAt])
+  @@index([expiryDate])
+  @@index([productId])
+  @@index([sedeId])
+  @@index([userId])
+}
+
+model Product {
+  id                   String                 @id
+  name                 String
+  type                 ProductType
+  unit                 ProductUnit
+  description          String?
+  costPerUnit          Decimal                @db.Decimal(10, 2)
+  minStockLevel        Int
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  category             String?
+  InventoryUsageDetail InventoryUsageDetail[]
+  Movement             Movement[]
+  ProductAllergen      ProductAllergen[]
+  ProductExpiration    ProductExpiration[]
+  StockBySede          StockBySede[]
+
+  @@index([name])
+}
+
+model ProductAllergen {
+  id         String   @id
+  productId  String
+  allergenId String
+  mlPerDose  Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  Allergen   Allergen @relation(fields: [allergenId], references: [id])
+  Product    Product  @relation(fields: [productId], references: [id])
+
+  @@unique([productId, allergenId])
+  @@index([allergenId])
+  @@index([productId])
+}
+
+model ProductExpiration {
+  id          String   @id
+  productId   String
+  sedeId      String
+  batchNumber String
+  expiryDate  DateTime
+  quantity    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  Product     Product  @relation(fields: [productId], references: [id])
+  Sede        Sede     @relation(fields: [sedeId], references: [id])
+
+  @@index([batchNumber])
+  @@index([expiryDate])
+  @@index([productId])
+  @@index([sedeId])
+}
+
+model Sede {
+  id                String              @id
+  name              String
+  address           String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  InventoryUsage    InventoryUsage[]
+  Movement          Movement[]
+  ProductExpiration ProductExpiration[]
+  StockBySede       StockBySede[]
+  User              User[]
+}
+
+model StockBySede {
+  id        String   @id
+  productId String
+  sedeId    String
+  quantity  Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Product   Product  @relation(fields: [productId], references: [id])
+  Sede      Sede     @relation(fields: [sedeId], references: [id])
+
+  @@unique([productId, sedeId])
+  @@index([productId])
+  @@index([sedeId])
+}
+
+model Supplier {
+  id             String   @id
+  name           String
+  invoiceNumber  String?
+  amountSupplied Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+
+  @@index([invoiceNumber])
+  @@index([name])
+}
+
+model User {
+  id             String           @id
+  email          String           @unique
+  name           String
+  role           UserRole
+  sedeId         String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  InventoryUsage InventoryUsage[]
+  Movement       Movement[]
+  Sede           Sede             @relation(fields: [sedeId], references: [id])
+
+  @@index([sedeId])
+}
+
+model citas {
+  id             String      @id
+  descripcion    String?
+  estado         EstadoCita
+  paciente_id    String
+  usuario_id     String
+  consultorio_id String
+  created_at     DateTime    @default(now())
+  updated_at     DateTime
+  color          String?     @default("#3B82F6")
+  fecha_fin      DateTime
+  fecha_inicio   DateTime
+  consultorios   Consultorio @relation(fields: [consultorio_id], references: [id])
+  pacientes      Paciente    @relation(fields: [paciente_id], references: [id])
+  usuarios       Usuario     @relation(fields: [usuario_id], references: [id])
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA_DEBITO
+  TARJETA_CREDITO
+  TRANSFERENCIA
+  OTRO
+}
+
+enum EstadoCobro {
+  PENDIENTE
+  COMPLETADO
+  CANCELADO
+}
+
+enum Rol {
+  DOCTOR
+  SECRETARIA
+  ADMINISTRADOR
+}
+
+enum TipoCambio {
+  CREACION
+  EDICION
+  ELIMINACION
+}
+
+enum AlxoidType {
+  A
+  B
+}
+
+enum EstadoCita {
+  PROGRAMADA
+  EN_CURSO
+  COMPLETADA
+  CANCELADA
+  NO_ASISTIO
+}
+
+enum MovementType {
+  ENTRY
+  EXIT
+}
+
+enum ProductType {
+  SIMPLE
+  COMPLEX
+}
+
+enum ProductUnit {
+  ML
+  PIECE
+}
+
+enum TipoTratamiento {
+  INMUNOTERAPIA
+  PRUEBAS
+  GAMMAGLOBULINA
+  VACUNAS_PEDIATRICAS
+  MEDICAMENTOS_EXTRAS
+  CONSULTA
+}
+
+enum UserRole {
+  DOCTOR
+  NURSE
+  SECRETARY
+}

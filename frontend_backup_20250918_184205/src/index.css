@@ -1,0 +1,377 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 22% 26%; /* #2b3846 */
+    --foreground: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 10% 3.9%;
+    --radius: 0.5rem;
+    --sidebar-width: 260px;
+    
+    /* Tu Procura Brand Colors */
+    --procura-blue: 221 83% 53%;
+    --procura-blue-dark: 221 83% 33%;
+    --procura-yellow: 45 93% 47%;
+    --procura-gray: 220 13% 91%;
+  }
+  .dark {
+    --background: 220 32% 17%;
+    --foreground: 0 0% 100%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-[#2b3846] text-white;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  }
+}
+
+@layer components {
+  /* Sidebar Navigation Styles */
+  .sidebar-nav-item {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .sidebar-nav-item:hover {
+    @apply transform translate-x-1;
+  }
+  
+  /* Logo Styles */
+  .logo-container {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .logo-container:hover {
+    @apply transform scale-105;
+  }
+  
+  /* Custom Scrollbar for Sidebar */
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--procura-blue)) transparent;
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--procura-blue));
+    border-radius: 3px;
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--procura-blue-dark));
+  }
+}
+
+/* Sidebar y layout principal */
+.sidebar-bg {
+  background-color: #2b3846 !important;
+}
+
+.layout-bg {
+  background-color: #2b3846 !important;
+}
+
+/* Custom Scrollbar for Tables */
+.table-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.table-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
+
+.table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+/* Smooth scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Estilos para el calendario moderno */
+.modern-datepicker {
+  @apply bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden;
+  font-family: inherit;
+  z-index: 9999 !important;
+  position: relative !important;
+}
+
+.modern-datepicker .react-datepicker__month-container {
+  @apply bg-white;
+}
+
+.modern-datepicker .react-datepicker__day-names {
+  @apply bg-gray-50 border-b border-gray-200;
+}
+
+.modern-datepicker .react-datepicker__day-name {
+  @apply text-gray-600 font-medium text-sm py-3 px-2;
+  width: 2.5rem;
+  height: 2.5rem;
+  line-height: 1.5rem;
+}
+
+.modern-datepicker .react-datepicker__day {
+  @apply text-gray-900 font-medium text-sm rounded-lg transition-all duration-200;
+  width: 2.5rem;
+  height: 2.5rem;
+  line-height: 2.5rem;
+  margin: 0.125rem;
+}
+
+.modern-datepicker .react-datepicker__day:hover {
+  @apply bg-blue-100 text-blue-700;
+}
+
+.modern-datepicker .react-datepicker__day--selected {
+  @apply bg-blue-600 text-white shadow-lg;
+}
+
+.modern-datepicker .react-datepicker__day--selected:hover {
+  @apply bg-blue-700 text-white;
+}
+
+.modern-datepicker .react-datepicker__day--keyboard-selected {
+  @apply bg-blue-100 text-blue-700;
+}
+
+.modern-datepicker .react-datepicker__day--outside-month {
+  @apply text-gray-400;
+}
+
+.modern-datepicker .react-datepicker__day--today {
+  @apply bg-orange-100 text-orange-700 border-2 border-orange-300 font-semibold;
+}
+
+.modern-datepicker .react-datepicker__day--disabled {
+  @apply text-gray-300 cursor-not-allowed;
+}
+
+.modern-datepicker .react-datepicker__day--disabled:hover {
+  @apply bg-transparent text-gray-300;
+}
+
+.modern-datepicker .react-datepicker__navigation {
+  @apply top-4;
+}
+
+.modern-datepicker .react-datepicker__navigation--previous {
+  @apply left-4;
+}
+
+.modern-datepicker .react-datepicker__navigation--next {
+  @apply right-4;
+}
+
+.modern-datepicker .react-datepicker__navigation-icon {
+  @apply border-gray-600;
+}
+
+.modern-datepicker .react-datepicker__navigation-icon:hover {
+  @apply border-gray-800;
+}
+
+.modern-datepicker .react-datepicker__month {
+  @apply p-4;
+}
+
+.modern-datepicker .react-datepicker__week {
+  @apply flex justify-center;
+}
+
+/* Animaciones */
+.modern-datepicker {
+  animation: slideDown 0.2s ease-out;
+  z-index: 9999 !important;
+  position: relative !important;
+}
+
+/* Asegurar que el calendario sea visible */
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+.react-datepicker-wrapper {
+  z-index: 9999 !important;
+}
+
+/* Estilos específicos para el calendario en portal */
+.modern-datepicker-portal {
+  @apply bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden;
+  font-family: inherit;
+  z-index: 9999 !important;
+  position: relative !important;
+}
+
+.modern-datepicker-portal .react-datepicker__month-container {
+  background: white;
+  width: 280px !important;
+}
+
+.modern-datepicker-portal .react-datepicker__month {
+  width: 100% !important;
+  text-align: center !important;
+}
+
+.modern-datepicker-portal .react-datepicker__day-names {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  white-space: nowrap !important;
+  margin-bottom: 0 !important;
+}
+
+.modern-datepicker-portal .react-datepicker__month {
+  width: 100% !important;
+  margin: 0 !important;
+  text-align: center !important;
+}
+
+.modern-datepicker-portal .react-datepicker__week {
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+.modern-datepicker-portal .react-datepicker__day {
+  color: #374151;
+  border-radius: 8px;
+  margin: 2px;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  transition: all 0.2s;
+}
+
+.modern-datepicker-portal .react-datepicker__day:hover {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.modern-datepicker-portal .react-datepicker__day--selected {
+  background-color: #2563eb !important;
+  color: white !important;
+}
+
+.modern-datepicker-portal .react-datepicker__day--today {
+  background-color: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.modern-datepicker-portal .react-datepicker__day--disabled {
+  color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.modern-datepicker-portal .react-datepicker__navigation {
+  top: 8px;
+}
+
+.modern-datepicker-portal .react-datepicker__navigation--previous {
+  left: 8px;
+}
+
+.modern-datepicker-portal .react-datepicker__navigation--next {
+  right: 8px;
+}
+
+.modern-datepicker-portal .react-datepicker__navigation-icon {
+  border-color: white;
+}
+
+.modern-datepicker-portal .react-datepicker__navigation-icon:hover {
+  border-color: #e5e7eb;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .modern-datepicker .react-datepicker__day {
+    width: 2rem;
+    height: 2rem;
+    line-height: 2rem;
+    font-size: 0.875rem;
+  }
+  
+  .modern-datepicker .react-datepicker__day-name {
+    width: 2rem;
+    height: 2rem;
+    line-height: 2rem;
+    font-size: 0.875rem;
+  }
+}

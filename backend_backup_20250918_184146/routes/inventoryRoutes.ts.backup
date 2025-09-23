@@ -1,0 +1,1083 @@
+import { Router } from 'express';
+import { 
+  registerInventoryExit, 
+  getInventoryEntriesByCategory, 
+  getInventoryExitsByCategory,
+  getInventoryEntriesDetailByCategory,
+  getInventoryExitsDetailByCategory,
+  getInventoryStockByCategory
+} from '../controllers/inventoryController';
+import prisma from '../prisma'
+import { Decimal } from '@prisma/client/runtime/library';
+import { v4 as uuidv4 } from 'uuid';
+import { cacheService } from '../services/cacheService';
+import { searchProducts } from '../controllers/inventoryController';
+import { cache, getCacheKey } from '../utils/cache';
+// import { registrarHistorialInventario } from '../utils/historialUtils';
+
+// Usar la instancia global del servicio de caché
+
+const router = Router();
+
+
+
+// Ruta para registrar salidas de inventario
+router.post('/use', registerInventoryExit);
+
+// GET /products - obtener todos los productos (disponibles globalmente)
+router.get('/products', async (req, res) => {
+  try {
+    const organizationId = (req as any).organizationId;
+    
+    if (!organizationId) {
+      return res.status(400).json({
+        error: 'organizacionId es requerido',
+        code: 'MISSING_ORGANIZATION_ID'
+      });
+    }
+    
+    const products = await prisma.product.findMany({
+      where: {
+        organizacion_id: organizationId // 🔒 FILTRO DE ORGANIZACIÓN
+      }
+    });
+    res.json(products);
+  } catch (error) {
+    console.error('Error al obtener productos:', error);
+    res.status(500).json({ error: 'Error al obtener productos' });
+  }
+});
+
+// GET /products/category/:category - obtener productos por categoría
+router.get('/products/category/:category', async (req, res) => {
+  try {
+    const organizationId = (req as any).organizationId;
+    
+    if (!organizationId) {
+      return res.status(400).json({
+        error: 'organizacionId es requerido',
+        code: 'MISSING_ORGANIZATION_ID'
+      });
+    }
+    
+    const category = req.params.category?.trim();
+    if (!category) return res.status(400).json({ error: 'Categoría requerida' });
+    const products = await prisma.product.findMany({
+      where: {
+        organizacion_id: organizationId, // 🔒 FILTRO DE ORGANIZACIÓN
+        category: { equals: category },
+      },
+    });
+    res.json(products);
+  } catch (error) {
+    console.error('Error al obtener productos por categoría:', error);
+    res.status(500).json({ error: 'Error al obtener productos por categoría' });
+  }
+});
+
+// Ruta para buscar productos
+router.get('/products/search', searchProducts)
+
+// GET /stock - obtener stock por sede del usuario autenticado
+router.get('/stock', async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: userId },
+      select: { email: true }
+    });
+    
+    if (!usuario) {
+      return res.status(401).json({ error: 'Usuario no encontrado' });
+    }
+    
+    // Usar sedeId real del usuario autenticado - COMPLETAMENTE DINÁMICO
+    const sedeId = (req as any).tenantId;
+    
+    if (!sedeId) {
+      return res.status(400).json({ error: 'SedeId requerido' });
+    }
+    
+    const stock = await prisma.stockBySede.findMany({
+      where: { sedeId: sedeId },
+      include: { Product: true }
+    });
+    
+    res.json(stock);
+  } catch (error) {
+    console.error('Error al obtener stock:', error);
+    res.status(500).json({ error: 'Error al obtener stock' });
+  }
+});
+
+// POST /inventory-entry/batch - registrar entradas de inventario en lote
+router.post('/inventory-entry/batch', async (req, res) => {
+  try {
+    const { entries, entryDate } = req.body;
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return res.status(400).json({ error: 'No hay entradas para registrar' });
+    }
+    
+    // CACHÉ: Invalidar caché del dashboard antes de procesar
+    cacheService.clear();
+    // Invalidar cache de dashboard específico
+    const { invalidateCacheByPrefix } = require('../utils/cache');
+    invalidateCacheByPrefix('dashboard');
+    
+    const results = [];
+    
+    // 🚀 SOLUCIÓN ROBUSTA: Usar transacciones para garantizar consistencia
+    for (const entry of entries) {
+      console.log('🔍 DEBUG - Procesando entrada:', {
+        productId: entry.productId,
+        quantity: entry.quantity,
+        unitCost: entry.unitCost,
+        sedeId: entry.sedeId
+      });
+      
+      // Obtener información del usuario desde el middleware de tenant
+      const user = (req as any).user;
+      const tenantId = (req as any).tenantId;
+      
+      if (!user) {
+        return res.status(401).json({ error: 'Información de usuario no disponible' });
+      }
+      
+      // USAR EL SEDEID ENVIADO POR EL FRONTEND EN LUGAR DEL TENANTID
+      const sedeId = entry.sedeId || tenantId;
+      if (!sedeId || sedeId === 'todos') {
+        return res.status(400).json({ error: 'Debe seleccionar una sede/consultorio específico.' });
+      }
+      
+      // 🎯 TRANSACCIÓN ATÓMICA: Todo o nada
+      let result;
+      try {
+        result = await prisma.$transaction(async (tx) => {
+        console.log('🚀 INICIANDO TRANSACCIÓN para producto:', entry.productId);
+        console.log('🔍 DEBUG - Datos de entrada:', {
+          productId: entry.productId,
+          quantity: entry.quantity,
+          unitCost: entry.unitCost,
+          sedeId: sedeId,
+          organizacionId: (req as any).organizationId
+        });
+        
+        // 1. Buscar el producto para obtener costPerUnit
+        const product = await tx.product.findUnique({ 
+          where: { id: String(entry.productId) } 
+        });
+        if (!product) {
+          throw new Error(`Producto no encontrado: ${entry.productId}`);
+        }
+        
+        const quantityDecimal = new Decimal(entry.quantity);
+        
+        // ✅ SOLUCIÓN ROBUSTA: Cálculo de unitCost con validaciones
+        let unitCost: Decimal;
+        if (product.unit === 'ML' && entry.unitCost) {
+          // Para productos con ml: unitCost del frontend es precio por frasco
+          // Necesitamos dividir por ml por frasco para obtener precio por ml
+          const mlPerVial = entry.mlPerVial || 1; // Default a 1 si no se especifica
+          
+          // 🔒 VALIDACIÓN: Asegurar que mlPerVial sea válido
+          if (mlPerVial <= 0) {
+            throw new Error(`mlPerVial inválido para ${product.name}: ${mlPerVial}. Debe ser mayor a 0.`);
+          }
+          
+          // 🔒 VALIDACIÓN: Asegurar que unitCost del frontend sea válido
+          if (entry.unitCost <= 0) {
+            throw new Error(`unitCost inválido para ${product.name}: ${entry.unitCost}. Debe ser mayor a 0.`);
+          }
+          
+          unitCost = new Decimal(entry.unitCost).div(mlPerVial);
+          
+          // 🔒 VALIDACIÓN: Asegurar que el resultado sea razonable
+          if (unitCost.toNumber() <= 0) {
+            throw new Error(`unitCost calculado inválido para ${product.name}: ${unitCost.toNumber()}. Verificar mlPerVial y unitCost del frontend.`);
+          }
+        } else {
+          // Para otros productos, usar el unitCost directamente
+          unitCost = new Decimal(entry.unitCost ?? product.costPerUnit);
+          
+          // 🔒 VALIDACIÓN: Asegurar que unitCost sea válido
+          if (unitCost.toNumber() <= 0) {
+            throw new Error(`unitCost inválido para ${product.name}: ${unitCost.toNumber()}. Debe ser mayor a 0.`);
+          }
+        }
+        
+        const totalCost = unitCost.mul(quantityDecimal);
+        
+        // 🔒 VALIDACIÓN: Asegurar que totalCost sea válido
+        if (totalCost.toNumber() <= 0) {
+          throw new Error(`totalCost inválido para ${product.name}: ${totalCost.toNumber()}. Verificar unitCost y quantity.`);
+        }
+        
+        // 🔒 VALIDACIÓN: Asegurar que totalCost sea razonable (no excesivamente alto)
+        if (totalCost.toNumber() > 1000000) {
+          throw new Error(`totalCost excesivamente alto para ${product.name}: ${totalCost.toNumber()}. Verificar cálculos.`);
+        }
+        
+        console.log('💰 Cálculos:', {
+          productName: product.name,
+          productUnit: product.unit,
+          quantity: quantityDecimal.toNumber(),
+          unitCostFromFrontend: entry.unitCost,
+          mlPerVial: entry.mlPerVial,
+          unitCostCalculated: unitCost.toNumber(),
+          totalCost: totalCost.toNumber()
+        });
+        
+        // 2. Obtener consultorioId de la sede
+        const sede = await tx.sede.findUnique({
+          where: { id: sedeId },
+          select: { consultorio_id: true }
+        });
+        if (!sede?.consultorio_id) {
+          throw new Error(`Sede ${sedeId} sin consultorio asignado`);
+        }
+        
+        // 3. Crear movimiento ENTRY
+        const movement = await tx.movement.create({
+          data: {
+            id: generateId(),
+            userId: user.id,
+            sedeId: sedeId,
+            consultorioId: sede.consultorio_id,
+            productId: String(entry.productId),
+            type: 'ENTRY',
+            quantity: quantityDecimal.toNumber(),
+            unitCost: unitCost.toNumber(),
+            totalCost: totalCost.toNumber(),
+            batchNumber: entry.batchNumber || undefined,
+            expiryDate: entry.expiryDate ? new Date(entry.expiryDate) : undefined,
+            createdAt: entryDate ? new Date(entryDate) : new Date().toISOString(),
+            organizacion_id: (req as any).organizationId,
+          },
+        });
+        
+        console.log('✅ Movement creado:', movement.id);
+        
+        // 4. Actualizar stock en StockBySede (CRÍTICO)
+        console.log('🔥 ACTUALIZANDO STOCK - Usando transacción atómica');
+        
+        const stockResult = await tx.stockBySede.upsert({
+          where: {
+            productId_sedeId: {
+              productId: String(entry.productId),
+              sedeId: sedeId,
+            },
+          },
+          update: {
+            quantity: { increment: quantityDecimal.toNumber() },
+            updatedAt: new Date(),
+          },
+          create: {
+            id: `stock-${entry.productId}-${sedeId}`,
+            productId: String(entry.productId),
+            sedeId: sedeId,
+            quantity: quantityDecimal.toNumber(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            organizacion_id: (req as any).organizationId,
+          },
+        });
+        
+        console.log('✅ StockBySede actualizado:', {
+          id: stockResult.id,
+          productId: stockResult.productId,
+          sedeId: stockResult.sedeId,
+          quantity: stockResult.quantity
+        });
+        
+        // 5. Registrar caducidad si aplica
+        if (entry.expiryDate) {
+          await tx.productExpiration.create({
+            data: {
+              id: uuidv4(),
+              productId: String(entry.productId),
+              sedeId: sedeId,
+              batchNumber: entry.batchNumber || 'default',
+              expiryDate: new Date(entry.expiryDate),
+              quantity: Number(entry.quantity),
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+          console.log('✅ ProductExpiration creado');
+        }
+        
+        return { movement, stockResult };
+        });
+        
+        console.log('🎉 TRANSACCIÓN COMPLETADA EXITOSAMENTE para producto:', entry.productId);
+        results.push(result.movement);
+      } catch (error) {
+        console.error('❌ ERROR EN TRANSACCIÓN para producto:', entry.productId, error);
+        throw error;
+      }
+    }
+    
+    console.log('🎉 TODAS LAS TRANSACCIONES COMPLETADAS - Enviando respuesta');
+    res.status(201).json({ 
+      success: true, 
+      data: results,
+      message: 'Entradas de inventario registradas correctamente'
+    });
+    
+  } catch (error) {
+    console.error('❌ ERROR CRÍTICO en entrada de inventario:', error);
+    res.status(500).json({ 
+      error: 'Error al registrar entradas de inventario',
+      details: error.message 
+    });
+  }
+});
+
+// GET /inventory-entry/by-category - resumen de entradas agrupadas por categoría
+router.get('/inventory-entry/by-category', getInventoryEntriesByCategory);
+
+// GET /exit/by-category - resumen de salidas agrupadas por categoría
+router.get('/exit/by-category', (req, res, next) => {
+  console.log('🔍 RUTA EJECUTÁNDOSE: /exit/by-category');
+  next();
+}, getInventoryExitsByCategory);
+
+// GET /inventory-entry/detail/by-category - detalles completos de entradas por categoría
+router.get('/inventory-entry/detail/by-category', getInventoryEntriesDetailByCategory);
+
+// GET /stock/by-category - STOCK ACTUAL por categoría (no movimientos)
+router.get('/stock/by-category', getInventoryStockByCategory);
+
+// GET /exit/detail/by-category - detalles completos de salidas por categoría
+router.get('/exit/detail/by-category', getInventoryExitsDetailByCategory);
+
+
+
+// 🚀 SISTEMA DE NIVEL AMAZON - DASHBOARD ULTRA-OPTIMIZADO
+router.get('/dashboard/public', async (req, res) => {
+  try {
+    const { sedeId, from, to } = req.query;
+    
+    // Obtener organización del usuario autenticado
+    const organizationId = (req as any).organizationId;
+    
+    if (!organizationId) {
+      console.error('❌ [dashboard/public] No se encontró organizationId');
+      return res.status(400).json({
+        error: 'organizacionId es requerido',
+        code: 'MISSING_ORGANIZATION_ID'
+      });
+    }
+    
+    // CORREGIDO: Usar el sedeId del frontend si está disponible, sino usar el tenantId del middleware
+    const userSedeId = sedeId || (req as any).tenantId || 'sede-organizacion-default';
+    
+    console.log('🔍 Dashboard - Usando tenantId del middleware:', {
+      organizationId,
+      tenantIdFromMiddleware: (req as any).tenantId,
+      sedeIdFromFrontend: sedeId,
+      sedeIdFinal: userSedeId,
+      from: from,
+      to: to
+    });
+    
+    // 🚀 SISTEMA DE CACHÉ INTELIGENTE - NIVEL AMAZON
+    // TEMPORALMENTE DESHABILITADO PARA FORZAR REGENERACIÓN CON DATOS CORRECTOS
+    const cacheKey = getCacheKey('dashboard', { sedeId: userSedeId, from, to });
+    const cached = cache.get(cacheKey);
+    if (false && cached) { // 🔧 FORZAR CACHE MISS
+      console.log('⚡ Cache HIT - Dashboard servido desde caché (Amazon-level performance)');
+      return res.json(cached);
+    }
+    
+    console.log('🚀 Cache MISS - Generando dashboard en tiempo real (Amazon-level accuracy) - FORZADO');
+    
+    // Función helper para crear fechas que incluyan el día completo
+    const createDateRange = (fromDate: string, toDate: string) => {
+      const fromDateTime = new Date(fromDate + 'T00:00:00')
+      const toDateTime = new Date(toDate + 'T23:59:59.999')
+      return {
+        gte: fromDateTime,
+        lte: toDateTime
+      }
+    }
+
+    // 🚀 DINÁMICO: Obtener todos los sedeId disponibles de la base de datos
+    let allSedeIds: string[] = [];
+    if (userSedeId === 'todos') {
+      // 🔒 FILTRO DE ORGANIZACIÓN: Solo obtener sedes de la organización correcta
+      const allSedes = await prisma.sede.findMany({
+        where: {
+          organizacion_id: organizationId
+        },
+        select: { id: true, name: true }
+      });
+      allSedeIds = allSedes.map(sede => sede.id);
+      console.log('🔍 Dashboard - SedeIds dinámicos obtenidos (filtrados por organización):', allSedes);
+      console.log('🔍 Dashboard - Array de IDs:', allSedeIds);
+    }
+
+    // 🚀 SISTEMA ROBUSTO Y ESCALABLE - FILTROS DINÁMICOS
+    const whereMovements = {
+      ...(userSedeId === 'todos' 
+        ? { sedeId: { in: allSedeIds } }
+        : { sedeId: userSedeId }
+      ),
+      ...(from && to ? { createdAt: createDateRange(String(from), String(to)) } : {}),
+    };
+
+    // 🔍 DEBUG: Log del filtro de movimientos para diagnosticar
+    console.log('🔍 Dashboard - Filtro de movimientos:', JSON.stringify(whereMovements, null, 2));
+    console.log('🔍 Dashboard - Parámetros recibidos:', { sedeId, from, to, userSedeId });
+    console.log('🔍 Dashboard - Fechas procesadas:', { 
+      from: from ? new Date(String(from) + 'T00:00:00') : null,
+      to: to ? new Date(String(to) + 'T23:59:59.999') : null
+    });
+
+    // OPTIMIZACIÓN: Ejecutar queries ultra-optimizadas en paralelo
+    const startTime = performance.now()
+    console.log('🚀 Backend - Iniciando queries del dashboard...')
+    
+    // OPTIMIZACIÓN CRÍTICA: Obtener solo productos con stock o que han tenido movimientos
+    const allProducts = await prisma.product.findMany({
+              where: {
+          organizacion_id: organizationId, // 🔒 FILTRO DE ORGANIZACIÓN
+          OR: [
+            { 
+              StockBySede: { 
+                some: { 
+                  sedeId: userSedeId === 'todos' 
+                    ? { in: allSedeIds }
+                    : userSedeId,
+                  quantity: { gt: 0 } 
+                } 
+              } 
+            },
+            { 
+              Movement: { 
+                some: { 
+                  sedeId: userSedeId === 'todos' 
+                    ? { in: allSedeIds }
+                    : userSedeId
+                } 
+              } 
+            }
+          ]
+        },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        unit: true,
+        description: true,
+        costPerUnit: true,
+        minStockLevel: true,
+        category: true,
+        createdAt: true,
+        updatedAt: true
+      },
+      take: 100 // LIMITAR a 100 productos máximo para velocidad
+    });
+    
+    const [
+      stockBySede,
+      movements,
+      expirationAlerts
+    ] = await Promise.all([
+      // Stock por producto y sede - QUERY ULTRA-OPTIMIZADA
+      (async () => {
+        const queryStart = performance.now()
+        const result = await prisma.stockBySede.findMany({
+          where: { 
+            sedeId: userSedeId === 'todos' 
+              ? { in: allSedeIds }
+              : userSedeId 
+          },
+          select: {
+            quantity: true,
+            Product: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                unit: true,
+                description: true,
+                costPerUnit: true,
+                minStockLevel: true,
+                category: true,
+                createdAt: true,
+                updatedAt: true
+              }
+            }
+          },
+          take: 25 // Ultra-agresivo: solo 25 productos
+        })
+        console.log(`📊 Stock query completada en ${(performance.now() - queryStart).toFixed(2)}ms`)
+        return result
+      })(),
+      
+      // Movimientos filtrados por fecha - QUERY MEJORADA
+      (async () => {
+        const queryStart = performance.now()
+        
+        // MEJORADO: Incluir más información para las tablas
+        const result = await prisma.movement.findMany({
+          where: whereMovements,
+          select: {
+            id: true,
+            type: true,
+            quantity: true,
+            totalCost: true,
+            productId: true,
+            batchNumber: true,
+            createdAt: true,
+            Product: {
+              select: {
+                name: true,
+                category: true,
+                unit: true
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+          // 🚨 CRÍTICO: Removido take: 100 para obtener TODOS los movimientos
+        })
+        
+        console.log(`📈 Movimientos query completada en ${(performance.now() - queryStart).toFixed(2)}ms`)
+        console.log(`🔍 Dashboard - Total movimientos obtenidos de BD: ${result.length}`)
+        console.log(`🔍 Dashboard - Primeros 5 movimientos:`, result.slice(0, 5).map(m => ({
+          id: m.id,
+          type: m.type,
+          totalCost: m.totalCost,
+          productName: m.Product?.name,
+          createdAt: m.createdAt
+        })))
+        return result
+      })(),
+      
+      // Alertas de caducidad - QUERY ULTRA-OPTIMIZADA
+      (async () => {
+        const queryStart = performance.now()
+        const result = await prisma.productExpiration.findMany({
+          where: {
+            sedeId: userSedeId === 'todos' 
+              ? { in: allSedeIds }
+              : userSedeId,
+            expiryDate: { lte: new Date(Date.now() + 1000 * 60 * 60 * 24 * 180) },
+            quantity: { gt: 0 }
+          },
+          select: {
+            id: true,
+            productId: true,
+            batchNumber: true,
+            expiryDate: true,
+            quantity: true,
+            Product: {
+              select: {
+                name: true,
+                category: true
+              }
+            }
+          },
+          orderBy: { expiryDate: 'asc' },
+          take: 15 // ULTRA-AGRESIVO: solo 15 alertas para máxima velocidad
+        })
+        console.log(`⚠️ Expiración query completada en ${(performance.now() - queryStart).toFixed(2)}ms`)
+        return result
+      })()
+    ])
+
+    const queriesTime = performance.now() - startTime
+    console.log(`⚡ Backend - Todas las queries completadas en ${queriesTime.toFixed(2)}ms`)
+
+    // OPTIMIZACIÓN: Procesar datos de manera ultra-eficiente
+    const processingStart = performance.now()
+    const entries = movements.filter(m => m.type === 'ENTRY');
+    const exits = movements.filter(m => m.type === 'EXIT');
+
+    // 🔍 DEBUG: Log de movimientos obtenidos
+    console.log('🔍 Dashboard - Total movimientos obtenidos:', movements.length);
+    console.log('🔍 Dashboard - Entradas encontradas:', entries.length);
+    console.log('🔍 Dashboard - Salidas encontradas:', exits.length);
+    console.log('🔍 Dashboard - Primeras 3 entradas:', entries.slice(0, 3).map(e => ({ 
+      productId: e.productId, 
+      totalCost: e.totalCost, 
+      createdAt: e.createdAt,
+      type: e.type 
+    })));
+    console.log('🔍 Dashboard - Primeras 3 salidas:', exits.slice(0, 3).map(e => ({ 
+      productId: e.productId, 
+      totalCost: e.totalCost, 
+      createdAt: e.createdAt,
+      type: e.type 
+    })));
+
+    // Crear un mapa de stock para acceso rápido
+    const stockMap = new Map();
+    for (const s of stockBySede) {
+      stockMap.set(s.Product?.id, Number(s.quantity));
+    }
+
+    // 🚀 CORREGIDO: Obtener TODAS las entradas históricas para calcular el valor real del inventario actual
+    // NO filtrar por fechas para el cálculo del inventario actual
+    const allHistoricalEntries = await prisma.movement.findMany({
+      where: {
+        ...(userSedeId === 'todos' 
+          ? { sedeId: { in: allSedeIds } }
+          : { sedeId: userSedeId }
+        ),
+        type: 'ENTRY' // Solo entradas para calcular el valor real del inventario
+      },
+      select: {
+        productId: true,
+        totalCost: true
+      }
+    });
+    
+    // Crear el mapa de valores reales por producto basado en TODAS las entradas históricas
+    const realValueMap = new Map();
+    for (const entry of allHistoricalEntries) {
+      const productId = entry.productId;
+      const currentValue = realValueMap.get(productId) || 0;
+      realValueMap.set(productId, currentValue + Number(entry.totalCost));
+    }
+    
+    // DEBUG: Verificar valores reales por producto
+    console.log('🔍 DEBUG - Valores reales por producto (TODAS las entradas históricas):', Object.fromEntries(realValueMap));
+    console.log('🔍 DEBUG - Entradas históricas procesadas:', allHistoricalEntries.length);
+    console.log('🔍 DEBUG - Entradas en rango de fechas:', entries.length);
+    
+    // Productos en inventario con stock y valor calculado - INCLUYENDO TODOS LOS PRODUCTOS
+    // MEJORADO: Usar valor real de las entradas para cada producto
+    const inventory = allProducts.map(product => {
+      const stockQuantity = stockMap.get(product.id) || 0;
+      const realValue = realValueMap.get(product.id) || 0;
+      
+      return {
+        id: product.id,
+        name: product.name,
+        type: product.type,
+        unit: product.unit,
+        description: product.description,
+        costPerUnit: product.costPerUnit,
+        minStockLevel: product.minStockLevel,
+        category: product.category,
+        quantity: stockQuantity,
+        totalValue: realValue > 0 ? realValue : (stockQuantity * Number(product.costPerUnit || 0)),
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt
+      };
+    });
+
+    // Métricas principales - OPTIMIZADAS
+    // CORREGIDO: Calcular valor total basándose en el stock real de todas las sedes
+    const totalInventoryValue = stockBySede.reduce((sum, stock) => {
+      const product = stock.Product;
+      if (!product) return sum;
+      
+      const realValue = realValueMap.get(product.id) || 0;
+      if (realValue > 0) {
+        // Si hay valor real de entradas, usar ese valor
+        return sum + realValue;
+      } else {
+        // Si no hay valor real, usar el precio base del producto
+        return sum + (Number(stock.quantity) * Number(product.costPerUnit || 0));
+      }
+    }, 0);
+    
+    // 🚀 SISTEMA ROBUSTO Y ESCALABLE - CÁLCULO DE MÉTRICAS PRECISAS
+    // Obtener TODOS los movimientos para cálculos precisos (sin límites)
+    const allMovementsForTotals = await prisma.movement.findMany({
+      where: whereMovements,
+      select: {
+        type: true,
+        totalCost: true,
+        createdAt: true
+      }
+    });
+    
+    console.log('🔍 Dashboard - Total movimientos para cálculos:', allMovementsForTotals.length);
+    
+    // Calcular totales precisos
+    const allEntries = allMovementsForTotals.filter(m => m.type === 'ENTRY');
+    const allExits = allMovementsForTotals.filter(m => m.type === 'EXIT');
+    
+    const totalEnteredInventoryCost = allEntries.reduce((sum, m) => 
+      sum + Number(m.totalCost || 0), 0);
+    
+    const totalUsedInventoryCost = allExits.reduce((sum, m) => 
+      sum + Number(m.totalCost || 0), 0);
+    
+    // 🚀 MÉTRICAS AVANZADAS - NIVEL AMAZON
+    const metrics = {
+      totalEntries: allEntries.length,
+      totalExits: allExits.length,
+      totalEnteredInventoryCost,
+      totalUsedInventoryCost,
+      // Análisis de tendencias
+      averageEntryValue: allEntries.length > 0 ? totalEnteredInventoryCost / allEntries.length : 0,
+      averageExitValue: allExits.length > 0 ? totalUsedInventoryCost / allExits.length : 0,
+      // Eficiencia del inventario
+      inventoryTurnover: totalInventoryValue > 0 ? totalUsedInventoryCost / totalInventoryValue : 0,
+      // Tiempo de respuesta
+      processingTime: performance.now() - startTime
+    };
+    
+    console.log('🚀 Dashboard - Métricas avanzadas (Amazon-level):', metrics);
+
+    // 🔍 DEBUG: Log de cálculos finales
+    console.log('🔍 Dashboard - Cálculo final de costos:');
+    console.log('  - totalEnteredInventoryCost:', totalEnteredInventoryCost);
+    console.log('  - totalUsedInventoryCost:', totalUsedInventoryCost);
+    console.log('  - totalInventoryValue:', totalInventoryValue);
+
+    // 🚀 CORREGIDO: Agrupar TODOS los productos por categoría usando el valor real del inventario actual
+    // NO filtrar por fechas para el cálculo del inventario por categoría
+    const categoryMap = new Map();
+    
+    for (const product of allProducts) {
+      const cat = product.category || 'Sin categoría';
+      const current = categoryMap.get(cat) || { 
+        category: cat, 
+        totalQuantity: 0, 
+        totalValue: 0,
+        totalProducts: 0
+      };
+      
+      const stockQuantity = stockMap.get(product.id) || 0;
+      current.totalQuantity += stockQuantity;
+      
+      // 🚀 CORREGIDO: Usar valor real de TODAS las entradas históricas (no filtrado por fechas)
+      const realValue = realValueMap.get(product.id) || 0;
+      if (realValue > 0) {
+        // Si hay entradas reales, usar ese valor (basado en TODAS las entradas históricas)
+        current.totalValue += realValue;
+      } else {
+        // Si no hay entradas, usar el precio base como fallback
+        current.totalValue += stockQuantity * Number(product.costPerUnit || 0);
+      }
+      
+      current.totalProducts += 1;
+      categoryMap.set(cat, current);
+    }
+    const inventoryByCategory = Array.from(categoryMap.values());
+
+    // Productos más usados - MEJORADO CON INFORMACIÓN COMPLETA
+    const productUsage = new Map();
+    for (const m of movements) {
+      if (m.type === 'EXIT') {
+        const id = m.productId;
+        const current = productUsage.get(id) || { 
+          productName: m.Product?.name || 'Producto desconocido', 
+          totalExits: 0, 
+          totalUsage: 0,
+          category: m.Product?.category || 'Sin categoría',
+          unit: m.Product?.unit || 'unidades'
+        };
+        current.totalExits += Number(m.quantity);
+        current.totalUsage += Number(m.quantity); // Para compatibilidad
+        productUsage.set(id, current);
+      }
+    }
+    const mostUsedProducts = Array.from(productUsage.values())
+      .filter(product => product.totalExits > 0) // Solo productos que han tenido salidas
+      .sort((a, b) => (b.totalExits + b.totalUsage) - (a.totalExits + a.totalUsage))
+      .slice(0, 10); // Incrementado a 10 productos
+
+    // Alertas de bajo stock - ULTRA-OPTIMIZADO
+    const lowStockAlerts = stockBySede
+      .filter(s => Number(s.quantity) < 10)
+      .map(s => ({
+        name: s.Product?.name || 'Desconocido',
+        quantity: Number(s.quantity),
+        unitCost: Number(s.Product?.costPerUnit || 0),
+        totalValue: Number(s.quantity) * Number(s.Product?.costPerUnit || 0),
+        category: s.Product?.category || 'Sin categoría'
+      }))
+      .slice(0, 10); // Ultra-agresivo: solo 10 alertas
+
+    // Procesar alertas de expiración - ULTRA-OPTIMIZADO
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    
+    const processedExpirationAlerts = expirationAlerts.map(alert => {
+      const expiryDate = new Date(alert.expiryDate);
+      const isExpired = expiryDate < now;
+      const isExpiringSoon = expiryDate <= thirtyDaysFromNow && expiryDate >= now;
+      
+      return {
+        ...alert,
+        isExpired,
+        isExpiringSoon,
+        status: isExpired ? 'caducado' : isExpiringSoon ? 'próximo_a_caducar' : 'normal',
+        daysUntilExpiry: isExpired 
+          ? Math.floor((now.getTime() - expiryDate.getTime()) / (24 * 60 * 60 * 1000))
+          : Math.floor((expiryDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+      };
+    }).slice(0, 15); // Ultra-agresivo: solo 15 alertas
+
+    // Movimientos recientes - MEJORADO CON INFORMACIÓN COMPLETA
+    const recentMovements = movements.slice(0, 10).map(movement => ({
+      id: movement.id,
+      type: movement.type,
+      productName: movement.Product?.name || 'Producto desconocido',
+      quantity: Number(movement.quantity),
+      totalCost: Number(movement.totalCost),
+      batchNumber: movement.batchNumber,
+      date: movement.createdAt,
+      category: movement.Product?.category || 'Sin categoría',
+      unit: movement.Product?.unit || 'unidades'
+    }));
+
+    // Inventario inmovilizado - MEJORADO CON LÓGICA REAL
+    const ninetyDaysAgo = new Date(Date.now() - 1000 * 60 * 60 * 24 * 90);
+    console.log('🔍 DEBUG - Inventario Inmovilizado:', {
+      ninetyDaysAgo: ninetyDaysAgo.toISOString(),
+      totalStockItems: stockBySede.length,
+      totalMovements: movements.length,
+      sampleMovements: movements.slice(0, 3).map(m => ({
+        productId: m.productId,
+        createdAt: m.createdAt,
+        isRecent: new Date(m.createdAt) > ninetyDaysAgo
+      }))
+    });
+    
+    const immobilizedInventory = stockBySede
+      .filter(s => {
+        const quantity = Number(s.quantity);
+        if (quantity <= 0) return false;
+        
+        // Buscar si ha tenido movimientos recientes
+        const hasRecentMovement = movements.some(m => 
+          m.productId === s.Product?.id && 
+          new Date(m.createdAt) > ninetyDaysAgo
+        );
+        
+        console.log(`🔍 DEBUG - Producto ${s.Product?.name}:`, {
+          quantity,
+          hasRecentMovement,
+          productId: s.Product?.id,
+          movementsForProduct: movements.filter(m => m.productId === s.Product?.id).length
+        });
+        
+        return !hasRecentMovement; // Solo productos sin movimientos recientes
+      })
+      .map(s => {
+        // Buscar el último movimiento de este producto
+        const lastMovement = movements
+          .filter(m => m.productId === s.Product?.id)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+        
+        const lastMovementDate = lastMovement ? new Date(lastMovement.createdAt) : new Date(0);
+        const daysWithoutMovement = Math.floor((Date.now() - lastMovementDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return {
+          productName: s.Product?.name || 'Producto desconocido',
+          quantity: Number(s.quantity),
+          value: Number(s.quantity) * Number(s.Product?.costPerUnit || 0),
+          lastMovement: lastMovementDate,
+          daysWithoutMovement,
+          category: s.Product?.category || 'Sin categoría'
+        };
+      })
+      .sort((a, b) => b.daysWithoutMovement - a.daysWithoutMovement) // Ordenar por días sin movimiento
+      .slice(0, 10); // Incrementado a 10 productos
+
+    const processingTime = performance.now() - processingStart
+    console.log(`⚙️ Backend - Procesamiento de datos completado en ${processingTime.toFixed(2)}ms`)
+
+    // Construir respuesta optimizada
+    const dashboardData = {
+      inventory,
+      totalInventoryValue,
+      totalEnteredInventoryCost,
+      totalUsedInventoryCost,
+      inventoryByCategory,
+      mostUsedProducts,
+      lowStockAlerts,
+      expirationAlerts: processedExpirationAlerts,
+      recentMovements,
+      immobilizedInventory
+    };
+
+    // Guardar en caché por 2 minutos para optimizar performance
+    cache.set(cacheKey, dashboardData, 2 * 60 * 1000);
+    
+    const totalTime = performance.now() - startTime
+    console.log(`✅ Backend - Dashboard generado y cacheado en ${totalTime.toFixed(2)}ms total`);
+    res.json(dashboardData);
+    
+  } catch (error) {
+    console.error('Error en dashboard/public:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unexpected error' });
+  }
+});
+
+// GET /consultorios-sedes - Obtener mapeo de consultorios a sedes DINÁMICAMENTE
+router.get('/consultorios-sedes', async (req, res) => {
+  try {
+    console.log('🔍 Endpoint /consultorios-sedes llamado');
+    
+    // Obtener organización del usuario autenticado
+    const organizationId = (req as any).organizationId;
+    
+    if (!organizationId) {
+      console.error('❌ [consultorios-sedes] No se encontró organizationId');
+      return res.status(400).json({
+        error: 'organizacionId es requerido',
+        code: 'MISSING_ORGANIZATION_ID'
+      });
+    }
+    
+    // 🔒 FILTRO DE ORGANIZACIÓN: Solo obtener sedes de la organización correcta
+    const sedes = await prisma.sede.findMany({
+      where: {
+        organizacion_id: organizationId
+      },
+      select: {
+        id: true,
+        name: true,
+        consultorio_id: true
+      }
+    });
+    
+    console.log('🔍 Sedes obtenidas de BD:', sedes);
+    
+    // Crear mapeo dinámico - RELACIÓN REAL entre Consultorio y Sede
+    const consultorioSedeMapping: { [key: string]: string } = {
+      'todos': 'todos' // Para "todos los consultorios"
+    };
+    
+    // Agregar mapeos dinámicos usando la relación real consultorio_id -> sede.id
+    for (const sede of sedes) {
+      if (sede.consultorio_id) {
+        consultorioSedeMapping[sede.consultorio_id] = sede.id;
+        console.log(`🔍 Mapeo agregado: ${sede.consultorio_id} -> ${sede.id}`);
+      }
+    }
+
+    console.log('🔍 Mapeo consultorio-sede generado:', consultorioSedeMapping);
+    res.json({ mapping: consultorioSedeMapping });
+  } catch (error) {
+    console.error('Error obteniendo mapeo consultorio-sede:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// GET /consultorios-sedes-public - Endpoint público para debug
+router.get('/consultorios-sedes-public', async (req, res) => {
+  try {
+    console.log('🔍 Endpoint DEBUG /consultorios-sedes-debug llamado');
+    
+    // Obtener organización del usuario autenticado
+    const organizationId = (req as any).organizationId;
+    
+    if (!organizationId) {
+      console.error('❌ [consultorios-sedes-public] No se encontró organizationId');
+      return res.status(400).json({
+        error: 'organizacionId es requerido',
+        code: 'MISSING_ORGANIZATION_ID'
+      });
+    }
+    
+    // 🔒 FILTRO DE ORGANIZACIÓN: Solo obtener sedes de la organización correcta
+    const sedes = await prisma.sede.findMany({
+      where: {
+        organizacion_id: organizationId
+      },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    
+    console.log('🔍 Sedes obtenidas de BD (sin consultorio_id):', sedes);
+    
+    // Crear mapeo temporal usando sedeId como consultorioId
+    const consultorioSedeMapping: { [key: string]: string } = {
+      'todos': 'todos'
+    };
+    
+    // Mapeo temporal: usar sedeId como consultorioId
+    for (const sede of sedes) {
+      consultorioSedeMapping[sede.id] = sede.id;
+      console.log(`🔍 Mapeo temporal agregado: ${sede.id} -> ${sede.id}`);
+    }
+
+    console.log('🔍 Mapeo consultorio-sede generado (temporal):', consultorioSedeMapping);
+    res.json({ 
+      mapping: consultorioSedeMapping,
+      debug: {
+        sedes: sedes,
+        totalSedes: sedes.length,
+        message: "Mapeo temporal usando sedeId como consultorioId"
+      }
+    });
+  } catch (error) {
+    console.error('Error obteniendo mapeo consultorio-sede:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+function generateId(): string {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+// Ruta de prueba para StockBySede.upsert (sin autenticación para testing)
+router.post('/test-stock-upsert', async (req: Request, res: Response) => {
+  try {
+    console.log('🧪 TEST - Iniciando prueba de StockBySede.upsert');
+    
+    const testData = {
+      productId: 'test-product-123',
+      sedeId: 'sede-tecamachalco',
+      quantity: 1,
+      organizationId: '550e8400-e29b-41d4-a716-446655440000'
+    };
+    
+    console.log('🧪 TEST - Datos de prueba:', testData);
+    
+    const result = await prisma.stockBySede.upsert({
+      where: {
+        productId_sedeId: {
+          productId: testData.productId,
+          sedeId: testData.sedeId,
+        },
+      },
+      update: {
+        quantity: { increment: testData.quantity },
+        updatedAt: new Date(),
+      },
+      create: {
+        id: `stock-${testData.productId}-${testData.sedeId}`,
+        productId: testData.productId,
+        sedeId: testData.sedeId,
+        quantity: testData.quantity,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        organizacion_id: testData.organizationId,
+      },
+    });
+    
+    console.log('✅ TEST - StockBySede.upsert exitoso:', result);
+    
+    res.json({
+      success: true,
+      message: 'StockBySede.upsert funcionó correctamente',
+      result: result
+    });
+    
+  } catch (error) {
+    console.error('❌ TEST - Error en StockBySede.upsert:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+export { router as inventoryRoutes }; 
