@@ -17,10 +17,12 @@
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "node",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "typeRoots": ["./types", "./node_modules/@types"]
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",

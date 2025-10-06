@@ -3,6 +3,23 @@ import prisma from '../prisma';
 import { asyncHandler } from '../utils/asyncHandler';
 import { cacheService } from '../services/cacheService';
 import { HistorialService } from '../services/historialService';
+import type { AuthenticatedUser } from '../types/express';
+
+// Tipos para el historial de cobros
+interface DetallesHistorial {
+  [key: string]: unknown;
+}
+
+// Tipos para las respuestas de la API
+// Interfaz para cobros con relaciones - usando el tipo de Prisma
+type CobroWithRelations = Awaited<ReturnType<typeof prisma.cobro.findMany>>[0];
+
+// Extensión de Request para incluir propiedades del middleware
+interface AuthenticatedRequest extends Request {
+  user?: AuthenticatedUser;
+  organizationId?: string;
+  tenantId?: string;
+}
 
 // Función helper para registrar historial de cambios usando el nuevo servicio
 async function registrarHistorialCobro(
@@ -10,8 +27,8 @@ async function registrarHistorialCobro(
   usuarioId: string,
   tipoCambio: 'CREACION' | 'EDICION' | 'ELIMINACION' | 'ACTUALIZACION',
   organizationId: string,
-  detallesAntes?: any,
-  detallesDespues?: any
+  detallesAntes?: DetallesHistorial,
+  detallesDespues?: DetallesHistorial
 ) {
   try {
     await HistorialService.registrarCambio({
@@ -29,34 +46,19 @@ async function registrarHistorialCobro(
   }
 }
 
-console.log("INICIANDO CONTROLADOR COBROS!!!");
-process.on('uncaughtException', function (err) {
+// Configuración de manejo de errores globales
+process.on('uncaughtException', (err) => {
   console.error('Excepción no capturada en controlador:', err);
 });
-process.on('unhandledRejection', function (err) {
+process.on('unhandledRejection', (err) => {
   console.error('Promesa no manejada en controlador:', err);
 });
-console.log("Antes de crear PrismaClient");
 
-export const getAllCobros = asyncHandler(async (req: Request, res: Response) => {
-  console.log("Entrando a getAllCobros");
-  
-  // Obtener organizacion_id del usuario autenticado si está disponible
-  const organizacionId = (req as any).organizationId;
-  const tenantId = (req as any).tenantId;
-  console.log("🔍 getAllCobros - organizationId:", organizacionId);
-  console.log("🔍 getAllCobros - req.tenantId:", tenantId);
-  console.log("🔍 getAllCobros - req.user:", (req as any).user);
-  
-  // Obtener filtro de consultorio del query parameter
+export const getAllCobros = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const organizacionId = req.organizationId;
   const consultorioId = req.query.consultorio_id as string;
-  console.log("🔍 Filtro consultorio:", consultorioId || "Todos los consultorios");
-  console.log("🔍 Query parameters completos:", req.query);
-  console.log("🔍 Tipo de consultorioId:", typeof consultorioId);
-  console.log("🔍 consultorioId === 'todos':", consultorioId === 'todos');
-  console.log("🔍 consultorioId && consultorioId !== 'todos':", consultorioId && consultorioId !== 'todos');
   
-  let cobros: any[];
+  let cobros: CobroWithRelations[];
   if (organizacionId) {
     // CACHÉ DESHABILITADO TEMPORALMENTE PARA DEBUG
     console.log("🔄 Obteniendo datos frescos de la base de datos");

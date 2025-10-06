@@ -2,6 +2,18 @@ import { Request, Response } from 'express';
 import prisma from '../prisma';
 import { asyncHandler } from '../utils/asyncHandler';
 
+// Tipos para actualización de organizaciones
+interface OrganizacionUpdateData {
+  nombre?: string;
+  ruc?: string | null;
+  direccion?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  logo_url?: string | null;
+  color_primario?: string | null;
+  color_secundario?: string | null;
+}
+
 export const getAllOrganizaciones = asyncHandler(async (req: Request, res: Response) => {
   const organizaciones = await prisma.organizacion.findMany({
     include: {
@@ -77,7 +89,7 @@ export const updateOrganizacion = asyncHandler(async (req: Request, res: Respons
   const { id } = req.params;
   const { nombre, ruc, direccion, telefono, email, logo_url, color_primario, color_secundario } = req.body;
   
-  const updateData: any = {};
+  const updateData: OrganizacionUpdateData = {};
   if (nombre) updateData.nombre = nombre;
   if (ruc !== undefined) updateData.ruc = ruc;
   if (direccion !== undefined) updateData.direccion = direccion;

@@ -2,11 +2,21 @@ import { Request, Response } from 'express';
 import prisma from '../prisma';
 import { asyncHandler } from '../utils/asyncHandler';
 
+// Tipos para actualización de pacientes
+interface PacienteUpdateData {
+  nombre?: string;
+  fecha_nacimiento?: Date;
+  genero?: string;
+  direccion?: string;
+  telefono?: string;
+  email?: string;
+  documento_identidad?: string;
+}
+
 export const getAllPacientes = asyncHandler(async (req: Request, res: Response) => {
   // OPTIMIZACIÓN: Agregar paginación para evitar cargar todos los datos
   const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20
-  ;
+  const limit = parseInt(req.query.limit as string) || 1000; // Aumentar límite por defecto
   const offset = (page - 1) * limit;
   
   // Obtener organizacion_id del usuario autenticado
@@ -74,8 +84,81 @@ export const getAllPacientes = asyncHandler(async (req: Request, res: Response) 
     totalCount = countData;
   }
   
-  // Respuesta directa para mantener compatibilidad con el frontend
-  res.json(pacientes);
+  // Respuesta con información de paginación
+  const totalPages = Math.ceil(totalCount / limit);
+  
+  res.json({
+    pacientes,
+    pagination: {
+      page,
+      limit,
+      total: totalCount,
+      totalPages
+    }
+  });
+});
+
+export const searchPacientes = asyncHandler(async (req: Request, res: Response) => {
+  const { q, page = 1, limit = 20 } = req.query;
+  const searchTerm = q as string;
+  
+  if (!searchTerm || searchTerm.trim().length < 2) {
+    return res.json({ pacientes: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } });
+  }
+  
+  const pageNum = parseInt(page as string);
+  const limitNum = parseInt(limit as string);
+  const offset = (pageNum - 1) * limitNum;
+  
+  const organizacionId = (req as any).tenantFilter?.organizacion_id;
+  
+  // Usar SQL directo para búsqueda más flexible que incluya combinaciones de nombre + apellido
+  const searchPattern = `%${searchTerm}%`;
+  
+  // Usar SQL directo para búsqueda más flexible
+  const pacientes = await prisma.$queryRaw`
+    SELECT id, nombre, apellido, fecha_nacimiento, genero, telefono, email, created_at, updated_at
+    FROM pacientes 
+    WHERE organizacion_id = ${organizacionId}::uuid
+    AND (
+      LOWER(nombre) LIKE LOWER(${searchPattern})
+      OR LOWER(apellido) LIKE LOWER(${searchPattern})
+      OR LOWER(CONCAT(nombre, ' ', apellido)) LIKE LOWER(${searchPattern})
+      OR LOWER(email) LIKE LOWER(${searchPattern})
+      OR telefono LIKE ${searchPattern}
+      OR documento_identidad LIKE ${searchPattern}
+    )
+    ORDER BY nombre ASC, apellido ASC
+    LIMIT ${limitNum} OFFSET ${offset}
+  ` as any[];
+
+  const totalCountResult = await prisma.$queryRaw`
+    SELECT COUNT(*) as count
+    FROM pacientes 
+    WHERE organizacion_id = ${organizacionId}::uuid
+    AND (
+      LOWER(nombre) LIKE LOWER(${searchPattern})
+      OR LOWER(apellido) LIKE LOWER(${searchPattern})
+      OR LOWER(CONCAT(nombre, ' ', apellido)) LIKE LOWER(${searchPattern})
+      OR LOWER(email) LIKE LOWER(${searchPattern})
+      OR telefono LIKE ${searchPattern}
+      OR documento_identidad LIKE ${searchPattern}
+    )
+  ` as any[];
+
+  const totalCount = parseInt(totalCountResult[0].count);
+  
+  const totalPages = Math.ceil(totalCount / limitNum);
+  
+  res.json({
+    pacientes,
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total: totalCount,
+      totalPages
+    }
+  });
 });
 
 export const getPacienteById = asyncHandler(async (req: Request, res: Response) => {
@@ -179,7 +262,7 @@ export const updatePaciente = asyncHandler(async (req: Request, res: Response) =
     }
   }
   
-  const updateData: any = {};
+  const updateData: PacienteUpdateData = {};
   if (nombre) updateData.nombre = nombre;
   if (fecha_nacimiento) updateData.fecha_nacimiento = new Date(fecha_nacimiento);
   if (genero) updateData.genero = genero;
@@ -199,51 +282,4 @@ export const deletePaciente = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
   await prisma.paciente.delete({ where: { id } });
   res.json({ message: 'Paciente eliminado' });
-}); 
-
-export const searchPacientes = asyncHandler(async (req: Request, res: Response) => {
-  const { q } = req.query;
-  console.log('🔍 Búsqueda de pacientes - Query:', q);
-  
-  if (!q || typeof q !== 'string' || q.trim().length < 1) {
-    return res.status(400).json({ error: 'Query demasiado corto' });
-  }
-  
-  // Obtener organizacion_id del usuario autenticado si está disponible
-  const organizacionId = (req as any).tenantFilter?.organizacion_id;
-  console.log('🏢 Organización ID:', organizacionId);
-  
-  let pacientes;
-  if (organizacionId) {
-    console.log('🔍 Usando Prisma con filtro de organización');
-    // Filtrar por organización usando Prisma
-    pacientes = await prisma.paciente.findMany({
-      where: {
-        organizacion_id: organizacionId,
-        OR: [
-          { nombre: { startsWith: q, mode: 'insensitive' } },
-          { apellido: { startsWith: q, mode: 'insensitive' } },
-        ],
-      },
-      orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
-      take: 10,
-    });
-    console.log('📋 Resultados Prisma con organización:', pacientes);
-  } else {
-    console.log('🔍 Usando Prisma sin filtro de organización');
-    // Sin filtro de organización (comportamiento original)
-    pacientes = await prisma.paciente.findMany({
-      where: {
-        OR: [
-          { nombre: { startsWith: q, mode: 'insensitive' } },
-          { apellido: { startsWith: q, mode: 'insensitive' } },
-        ],
-      },
-      orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
-      take: 10,
-    });
-    console.log('📋 Resultados Prisma:', pacientes);
-  }
-  
-  res.json(pacientes);
 }); 

@@ -25,7 +25,10 @@ import bloqueoMedicoRoutes from './routes/bloqueoMedicoRoutes'
 import googleAuthRoutes from './routes/googleAuthRoutes'
 // import googleCalendarRoutes from './routes/googleCalendarSimple' // Comentado - usando googleAuthRoutes en su lugar
 import whatsappRoutes from './routes/whatsappRoutes'
+import metricsRoutes from './routes/metricsRoutes'
 import { authenticateMultiTenant } from './middleware/tenantMiddleware'
+import { connectionLimiterMiddleware } from './middleware/connectionLimiter'
+import { cacheMiddleware } from './utils/smartCache'
 import prisma from './prisma'
 import monitoringService from './services/monitoringService'
 import immunotherapyRoutes from './routes/immunotherapyRoutes';
@@ -82,19 +85,48 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-// SOLUCIÓN SIMPLIFICADA: Aplicar rate limiting solo a rutas específicas
+// Rate limiting ULTRA ESTRICTO para rutas críticas
+const strictLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: process.env.NODE_ENV === 'production' ? 30 : 100, // 30 requests/min en producción
+  message: {
+    error: 'Demasiadas peticiones a rutas críticas, intenta más tarde'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiting para búsquedas (más permisivo pero controlado)
+const searchLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: process.env.NODE_ENV === 'production' ? 60 : 200, // 60 búsquedas/min en producción
+  message: {
+    error: 'Demasiadas búsquedas, espera un momento'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// APLICAR RATE LIMITING ESTRATIFICADO POR CRITICIDAD
+
+// Rutas CRÍTICAS - Rate limiting ultra estricto
+app.use('/api/usuarios', strictLimiter);
+app.use('/api/consultorios', strictLimiter);
+app.use('/api/cobros', strictLimiter);
+app.use('/api/inventory', strictLimiter);
+
+// Rutas de BÚSQUEDA - Rate limiting específico para búsquedas
+app.use('/api/pacientes/search', searchLimiter);
+
+// Rutas NORMALES - Rate limiting estándar
 app.use('/api/pacientes', limiter);
-app.use('/api/usuarios', limiter);
-app.use('/api/consultorios', limiter);
 app.use('/api/servicios', limiter);
 app.use('/api/citas', limiter);
-app.use('/api/cobros', limiter);
 app.use('/api/precios-consultorio', limiter);
 app.use('/api/cobro-conceptos', limiter);
 app.use('/api/historial-cobros', limiter);
 app.use('/api/historial', limiter);
 app.use('/api/organizaciones', limiter);
-app.use('/api/inventory', limiter);
 app.use('/api/immunotherapy', limiter);
 app.use('/api/disponibilidad-medico', limiter);
 app.use('/api/bloqueo-medico', limiter);
@@ -150,6 +182,15 @@ app.use(cors({
 app.options('*', cors());
 
 app.use(express.json());
+
+// 🚀 PROTECCIONES ANTI-SATURACIÓN
+// 1. Limitar conexiones simultáneas
+app.use(connectionLimiterMiddleware);
+
+// 2. Cache inteligente para rutas de lectura
+app.use('/api/pacientes', cacheMiddleware(2 * 60 * 1000)); // 2 minutos
+app.use('/api/consultorios', cacheMiddleware(5 * 60 * 1000)); // 5 minutos
+app.use('/api/servicios', cacheMiddleware(10 * 60 * 1000)); // 10 minutos
 
 // Configurar middleware de sesiones
 app.use(session({
@@ -395,6 +436,9 @@ app.use('/api/google', authenticateMultiTenant, googleAuthRoutes);
 
 // Rutas de WhatsApp
 app.use('/api/whatsapp', whatsappRoutes);
+
+// Rutas de métricas (sin autenticación para monitoreo)
+app.use('/api/metrics', metricsRoutes);
 
 // Rutas para manejar callbacks de OAuth
 app.get('/sincronizacion-exitosa', (req: Request, res: Response) => {

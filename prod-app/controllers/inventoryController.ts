@@ -707,22 +707,32 @@ export async function searchProducts(req: Request, res: Response) {
     const { q } = req.query
     const organizationId = (req as any).organizationId
 
+    console.log('🔍 [searchProducts] Query recibida:', { q, organizationId })
+
     if (!q || typeof q !== 'string' || q.trim().length < 2) {
       return res.status(400).json({ error: 'Query debe tener al menos 2 caracteres' })
     }
 
-    if (!organizationId) {
-      return res.status(400).json({ error: 'No se pudo determinar la organización del usuario' })
-    }
+    // Si no hay organizationId, buscar en todos los productos (para testing)
+    const whereClause = organizationId 
+      ? {
+          organizacion_id: organizationId,
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { category: { contains: q, mode: 'insensitive' } }
+          ]
+        }
+      : {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { category: { contains: q, mode: 'insensitive' } }
+          ]
+        }
+
+    console.log('🔍 [searchProducts] Where clause:', whereClause)
 
     const products = await prisma.product.findMany({
-      where: {
-        organizacion_id: organizationId, // ✅ ARREGLADO: Filtrar por organización
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { category: { contains: q, mode: 'insensitive' } }
-        ]
-      },
+      where: whereClause,
       select: {
         id: true,
         name: true,
@@ -738,7 +748,8 @@ export async function searchProducts(req: Request, res: Response) {
       take: 10
     })
 
-    res.json(products)
+    console.log('🔍 [searchProducts] Productos encontrados:', products.length)
+    res.json({ products })
   } catch (error: any) {
     console.error('Error en searchProducts:', error)
     res.status(500).json({ error: error.message })

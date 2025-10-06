@@ -71,6 +71,7 @@ ID de cita: ${data.citaId}`
           usuario_id: data.usuarioId,
           paciente_id: data.pacienteId,
           cita_id: data.citaId,
+          template_name: 'APPOINTMENT_REMINDER',
           message_type: 'TEMPLATE',
           content: {
             body: messageBody,
@@ -98,6 +99,7 @@ ID de cita: ${data.citaId}`
           usuario_id: data.usuarioId,
           paciente_id: data.pacienteId,
           cita_id: data.citaId,
+          template_name: 'APPOINTMENT_REMINDER',
           message_type: 'TEMPLATE',
           content: {
             body: 'Error al enviar mensaje',

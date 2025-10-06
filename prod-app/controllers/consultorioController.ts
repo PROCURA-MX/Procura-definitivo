@@ -351,13 +351,13 @@ export const deleteConsultorio = asyncHandler(async (req: Request, res: Response
   ` as any[];
   
   const deps = dependencias[0];
-  const totalDependencias = deps.usuarios_count;
+  const totalDependencias = Number(deps.usuarios_count); // Convertir BigInt a Number
   
   if (totalDependencias > 0) {
     return res.status(400).json({ 
       error: 'No se puede eliminar el consultorio porque tiene usuarios asociados',
       dependencias: {
-        usuarios: deps.usuarios_count,
+        usuarios: totalDependencias, // Usar el número convertido
         total: totalDependencias
       }
     });

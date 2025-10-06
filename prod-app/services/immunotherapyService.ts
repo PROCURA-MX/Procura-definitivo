@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import * as crypto from 'crypto';
 
 export interface ImmunotherapyRecordDto {
   pacienteId: string;
@@ -95,6 +96,7 @@ export class ImmunotherapyService {
           
           const newRecord = await tx.immunotherapyRecord.create({
             data: {
+              id: crypto.randomUUID(),
               pacienteId: dto.pacienteId,
               organizacionId: dto.organizacionId,
               sedeId: dto.sedeId,
@@ -105,7 +107,8 @@ export class ImmunotherapyService {
               fechaUltimaAplicacion: dto.fechaInicio,
               editadoPor: dto.editadoPor,
               alergenos: dto.alergenos || [],
-              estado: 'ACTIVO'
+              estado: 'ACTIVO',
+              updatedAt: new Date()
             }
           });
 
@@ -132,6 +135,7 @@ export class ImmunotherapyService {
   async createTreatmentLog(dto: TreatmentLogDto): Promise<any> {
     return await this.prisma.immunotherapyLog.create({
       data: {
+        id: crypto.randomUUID(),
         recordId: dto.recordId,
         tipoTratamiento: dto.tipoTratamiento,
         subtipo: dto.subtipo,

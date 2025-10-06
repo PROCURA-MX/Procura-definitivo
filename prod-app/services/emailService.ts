@@ -172,6 +172,7 @@ export class EmailService {
           usuario_id: data.usuarioId,
           paciente_id: data.pacienteId || null,
           cita_id: data.citaId || null,
+          template_name: 'APPOINTMENT_REMINDER',
           message_type: 'APPOINTMENT_REMINDER',
           content: {
             subject: subject,
@@ -300,6 +301,7 @@ export class EmailService {
         data: {
           usuario_id: data.usuarioId,
           paciente_id: data.pacienteId || null,
+          template_name: 'TREATMENT_REMINDER',
           message_type: 'TREATMENT_REMINDER',
           content: {
             subject: subject,
@@ -474,6 +476,8 @@ Este es un mensaje automático del sistema de facturación.
         data: {
           usuario_id: data.usuarioId,
           paciente_id: data.pacienteId,
+          cobro_id: data.cobroId || null,
+          template_name: 'INVOICE_EMAIL',
           message_type: 'INVOICE_EMAIL',
           content: {
             subject: subject,
@@ -609,6 +613,7 @@ Este es un mensaje automático del sistema de facturación.
           usuario_id: data.usuarioId,
           paciente_id: data.pacienteId || null,
           cobro_id: data.cobroId || null,
+          template_name: 'PAYMENT_NOTIFICATION',
           message_type: 'PAYMENT_NOTIFICATION',
           content: {
             subject: subject,

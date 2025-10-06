@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 
 /**
@@ -12,7 +13,7 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 /**
  * Handler principal - compatible con todos los controladores
  */
-export function asyncHandler<T = any>(
+export function asyncHandler<T = unknown>(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<T>
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -23,7 +24,7 @@ export function asyncHandler<T = any>(
 /**
  * Handler para rutas autenticadas - con validación de usuario
  */
-export function authenticatedAsyncHandler<T = any>(
+export function authenticatedAsyncHandler<T = unknown>(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<T>
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -42,7 +43,7 @@ export function authenticatedAsyncHandler<T = any>(
 /**
  * Handler para rutas públicas - sin autenticación
  */
-export function publicAsyncHandler<T = any>(
+export function publicAsyncHandler<T = unknown>(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<T>
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {

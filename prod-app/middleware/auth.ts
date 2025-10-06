@@ -1,11 +1,17 @@
+/// <reference path="../types/express.d.ts" />
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Extender la interfaz Request para incluir el usuario
-// Los tipos están definidos en types/express.d.ts
+// Tipos para el token JWT decodificado
+interface JwtPayload {
+  id: string;
+  email?: string;
+  iat?: number;
+  exp?: number;
+}
 
 // Middleware para autenticar el token JWT
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
@@ -18,7 +24,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     }
 
     // Verificar el token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecreto123') as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecreto123') as JwtPayload;
     
     // Obtener el usuario de la base de datos
     const user = await prisma.usuario.findUnique({

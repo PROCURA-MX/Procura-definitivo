@@ -8,7 +8,7 @@ interface CacheEntry<T> {
 }
 
 class CacheService {
-  private cache = new Map<string, CacheEntry<any>>();
+  private cache = new Map<string, CacheEntry<unknown>>();
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutos
 
   /**
@@ -27,7 +27,7 @@ class CacheService {
       return null;
     }
 
-    return entry.data;
+    return entry.data as T;
   }
 
   /**

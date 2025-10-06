@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node compile-simple.js",
     "start": "node dist/index.js",
-    "dev": "./start-dev.sh",
+    "dev": "npm run build && npm start",
     "test": "jest",
     "seed": "npx ts-node seed-test-data.ts",
     "seed-services": "npx ts-node seed-services.ts"

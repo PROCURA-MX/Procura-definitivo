@@ -1,0 +1,118 @@
+### ===========================================
+### PRUEBAS AUTOMATIZADAS - BACKEND PROCURA
+### ===========================================
+### Usar con VSCode REST Client o importar en Postman
+### Base URL: http://localhost:3002
+
+### ✅ HEALTH CHECK - Debe responder 200 OK
+GET http://localhost:3002/health
+
+### ===========================================
+### AUTENTICACIÓN
+### ===========================================
+
+### ✅ LOGIN - Credenciales correctas (debe responder 200 OK)
+POST http://localhost:3002/api/login
+Content-Type: application/json
+
+{
+  "email": "doctor@clinica.com",
+  "password": "123456"
+}
+
+### ❌ LOGIN - Credenciales incorrectas (debe responder 401 Unauthorized)
+POST http://localhost:3002/api/login
+Content-Type: application/json
+
+{
+  "email": "doctor@clinica.com",
+  "password": "password_incorrecto"
+}
+
+### ❌ LOGIN - Campos faltantes (debe responder 400 Bad Request)
+POST http://localhost:3002/api/login
+Content-Type: application/json
+
+{
+  "email": "doctor@clinica.com"
+}
+
+### ❌ LOGIN - Método incorrecto GET (debe responder 404 Not Found)
+GET http://localhost:3002/api/login
+
+### ===========================================
+### RUTAS PROTEGIDAS - SIN TOKEN (deben responder 401)
+### ===========================================
+
+### ❌ USUARIOS - Sin token (debe responder 401 Unauthorized)
+GET http://localhost:3002/api/usuarios
+
+### ❌ PACIENTES - Sin token (debe responder 401 Unauthorized)
+GET http://localhost:3002/api/pacientes
+
+### ❌ COBROS - Sin token (debe responder 401 Unauthorized)
+GET http://localhost:3002/api/cobros
+
+### ❌ CONSULTORIOS - Sin token (debe responder 401 Unauthorized)
+GET http://localhost:3002/api/consultorios
+
+### ❌ SERVICIOS - Sin token (debe responder 401 Unauthorized)
+GET http://localhost:3002/api/servicios
+
+### ❌ CITAS - Sin token (debe responder 401 Unauthorized)
+GET http://localhost:3002/api/citas
+
+### ===========================================
+### RUTAS PROTEGIDAS - CON TOKEN (deben responder 200)
+### ===========================================
+### ⚠️ IMPORTANTE: Reemplaza {{token}} con el JWT obtenido del login exitoso
+
+### ✅ USUARIOS - Con token (debe responder 200 OK)
+GET http://localhost:3002/api/usuarios
+Authorization: Bearer {{token}}
+
+### ✅ PACIENTES - Con token (debe responder 200 OK)
+GET http://localhost:3002/api/pacientes
+Authorization: Bearer {{token}}
+
+### ✅ COBROS - Con token (debe responder 200 OK)
+GET http://localhost:3002/api/cobros
+Authorization: Bearer {{token}}
+
+### ✅ CONSULTORIOS - Con token (debe responder 200 OK)
+GET http://localhost:3002/api/consultorios
+Authorization: Bearer {{token}}
+
+### ✅ SERVICIOS - Con token (debe responder 200 OK)
+GET http://localhost:3002/api/servicios
+Authorization: Bearer {{token}}
+
+### ✅ CITAS - Con token (debe responder 200 OK)
+GET http://localhost:3002/api/citas
+Authorization: Bearer {{token}}
+
+### ===========================================
+### RUTAS ADICIONALES
+### ===========================================
+
+### ✅ ORGANIZACIONES - Con token
+GET http://localhost:3002/api/organizaciones
+Authorization: Bearer {{token}}
+
+### ✅ INVENTARIO - Con token
+GET http://localhost:3002/api/inventory
+Authorization: Bearer {{token}}
+
+### ✅ INMUNOTERAPIA - Con token
+GET http://localhost:3002/api/immunotherapy
+Authorization: Bearer {{token}}
+
+### ===========================================
+### INSTRUCCIONES DE USO
+### ===========================================
+### 1. Asegúrate de que el backend esté corriendo en http://localhost:3002
+### 2. Ejecuta primero el LOGIN con credenciales correctas
+### 3. Copia el token de la respuesta
+### 4. Reemplaza {{token}} en las rutas protegidas con el token real
+### 5. Ejecuta las pruebas de rutas protegidas
+### 6. Verifica que todas respondan con los códigos esperados

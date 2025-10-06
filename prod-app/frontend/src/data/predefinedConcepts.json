@@ -1,0 +1,315 @@
+[
+  {
+    "id": "predef-001",
+    "nombre": "Consulta médica general",
+    "descripcion": "Consulta médica general, honorarios médicos",
+    "clave_sat": "85121502",
+    "clave_unidad": "E48",
+    "categoria": "Consultas"
+  },
+  {
+    "id": "predef-002",
+    "nombre": "Consulta médica especializada",
+    "descripcion": "Consulta médica especializada en alergología, honorarios médicos",
+    "clave_sat": "85121600",
+    "clave_unidad": "E48",
+    "categoria": "Consultas"
+  },
+  {
+    "id": "predef-003",
+    "nombre": "Nebulización",
+    "descripcion": "Terapia de nebulización",
+    "clave_sat": "85121600",
+    "clave_unidad": "E48",
+    "categoria": "Consultas"
+  },
+  {
+    "id": "predef-004",
+    "nombre": "Glicerinado por unidad",
+    "descripcion": "Extracto alergénico glicerinado, dosis",
+    "clave_sat": "51201600",
+    "clave_unidad": "H87",
+    "categoria": "Alergia – Tratamientos/Pruebas"
+  },
+  {
+    "id": "predef-005",
+    "nombre": "Glicerinado por frasco",
+    "descripcion": "Extracto alergénico glicerinado, frasco",
+    "clave_sat": "51201600",
+    "clave_unidad": "H87",
+    "categoria": "Alergia – Tratamientos/Pruebas"
+  },
+  {
+    "id": "predef-006",
+    "nombre": "Sublingual",
+    "descripcion": "Extracto alergénico para inmunoterapia sublingual, vial/dosis",
+    "clave_sat": "51201600",
+    "clave_unidad": "H87",
+    "categoria": "Alergia – Tratamientos/Pruebas"
+  },
+  {
+    "id": "predef-007",
+    "nombre": "Alxoid 1-3 alérgenos",
+    "descripcion": "Extracto alergénico tipo Alxoid, 1–3 alérgenos",
+    "clave_sat": "51201600",
+    "clave_unidad": "H87",
+    "categoria": "Alergia – Tratamientos/Pruebas"
+  },
+  {
+    "id": "predef-008",
+    "nombre": "Alxoid 4+ alérgenos",
+    "descripcion": "Extracto alergénico tipo Alxoid, 4 o más alérgenos",
+    "clave_sat": "51201600",
+    "clave_unidad": "H87",
+    "categoria": "Alergia – Tratamientos/Pruebas"
+  },
+  {
+    "id": "predef-009",
+    "nombre": "ALEX de alergia molecular",
+    "descripcion": "Prueba de alergia molecular ALEX",
+    "clave_sat": "85111606",
+    "clave_unidad": "E48",
+    "categoria": "Alergia – Tratamientos/Pruebas"
+  },
+  {
+    "id": "predef-010",
+    "nombre": "Phadiatop",
+    "descripcion": "Prueba diagnóstica de alergia por método Phadiatop",
+    "clave_sat": "85111606",
+    "clave_unidad": "E48",
+    "categoria": "Alergia – Tratamientos/Pruebas"
+  },
+  {
+    "id": "predef-011",
+    "nombre": "Prick",
+    "descripcion": "Pruebas diagnósticas de alergia tipo prick",
+    "clave_sat": "85111606",
+    "clave_unidad": "E48",
+    "categoria": "Alergia – Tratamientos/Pruebas"
+  },
+  {
+    "id": "predef-012",
+    "nombre": "Pruebas con alimentos",
+    "descripcion": "Pruebas diagnósticas de alergia a alimentos",
+    "clave_sat": "85111606",
+    "clave_unidad": "E48",
+    "categoria": "Alergia – Tratamientos/Pruebas"
+  },
+  {
+    "id": "predef-013",
+    "nombre": "FeNO",
+    "descripcion": "Prueba de óxido nítrico exhalado (FeNO)",
+    "clave_sat": "41116107",
+    "clave_unidad": "E48",
+    "categoria": "Pruebas diagnósticas adicionales"
+  },
+  {
+    "id": "predef-014",
+    "nombre": "COVID/Influenza",
+    "descripcion": "Prueba inmunológica combinada para COVID-19 e Influenza",
+    "clave_sat": "41116107",
+    "clave_unidad": "E48",
+    "categoria": "Pruebas diagnósticas adicionales"
+  },
+  {
+    "id": "predef-015",
+    "nombre": "Estreptococo B",
+    "descripcion": "Prueba rápida de detección de estreptococo grupo B",
+    "clave_sat": "41104107",
+    "clave_unidad": "E48",
+    "categoria": "Pruebas diagnósticas adicionales"
+  },
+  {
+    "id": "predef-016",
+    "nombre": "Influenza A y B / Sincitial / Adenovirus",
+    "descripcion": "Panel rápido de detección viral (Influenza A/B, VSR, Adenovirus)",
+    "clave_sat": "41116107",
+    "clave_unidad": "E48",
+    "categoria": "Pruebas diagnósticas adicionales"
+  },
+  {
+    "id": "predef-017",
+    "nombre": "Vacuna Influenza",
+    "descripcion": "Vacuna contra el virus de la influenza tetravalente 0.5 ml, vía intramuscular",
+    "clave_sat": "51201608",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-018",
+    "nombre": "Gardasil 9 (VPH)",
+    "descripcion": "Vacuna contra el virus del papiloma humano (VPH) Gardasil 9, 0.5 ml",
+    "clave_sat": "51201649",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-019",
+    "nombre": "Menactra (meningococo)",
+    "descripcion": "Vacuna contra meningococo (Menactra), 0.5 ml",
+    "clave_sat": "51201610",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-020",
+    "nombre": "Prevenar 13 V",
+    "descripcion": "Vacuna antineumocócica conjugada Prevenar 13 V",
+    "clave_sat": "51201615",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-021",
+    "nombre": "Prevenar 20",
+    "descripcion": "Vacuna antineumocócica conjugada Prevenar 20",
+    "clave_sat": "51201615",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-022",
+    "nombre": "Hexacima",
+    "descripcion": "Vacuna combinada Hexacima (difteria, tétanos, tos ferina, polio, Hib, hepatitis B)",
+    "clave_sat": "51201629",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-023",
+    "nombre": "MMR (triple viral)",
+    "descripcion": "Vacuna contra sarampión, paperas y rubéola (MMR)",
+    "clave_sat": "51201609",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-024",
+    "nombre": "Proquad",
+    "descripcion": "Vacuna combinada contra sarampión, paperas, rubéola y varicela (Proquad)",
+    "clave_sat": "51201609",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-025",
+    "nombre": "Varivax",
+    "descripcion": "Vacuna contra varicela (Varivax)",
+    "clave_sat": "51201624",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-026",
+    "nombre": "Vaqta (Hepatitis A)",
+    "descripcion": "Vacuna contra hepatitis A (Vaqta)",
+    "clave_sat": "51201607",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-027",
+    "nombre": "Hepatitis A y B",
+    "descripcion": "Vacuna combinada contra hepatitis A y B",
+    "clave_sat": "51201607",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-028",
+    "nombre": "Herpes Zóster",
+    "descripcion": "Vacuna contra herpes zóster",
+    "clave_sat": "51201626",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-029",
+    "nombre": "Fiebre amarilla",
+    "descripcion": "Vacuna contra fiebre amarilla",
+    "clave_sat": "51201625",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-030",
+    "nombre": "Adacel Boost (Tdap)",
+    "descripcion": "Vacuna Adacel Boost contra difteria, tétanos y tos ferina (Tdap)",
+    "clave_sat": "51201631",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-031",
+    "nombre": "Rota Teq",
+    "descripcion": "Vacuna oral contra rotavirus (Rota Teq)",
+    "clave_sat": "51201623",
+    "clave_unidad": "H87",
+    "categoria": "Vacunas"
+  },
+  {
+    "id": "predef-032",
+    "nombre": "Bacmune 3 / Bacmune 9",
+    "descripcion": "Inmunoterapia Bacmune (presentación 3 o 9 dosis)",
+    "clave_sat": "51201600",
+    "clave_unidad": "H87",
+    "categoria": "Medicamentos e inmunoterapia"
+  },
+  {
+    "id": "predef-033",
+    "nombre": "Diprospán",
+    "descripcion": "Diprospán (betametasona), 1 ampolleta",
+    "clave_sat": "51191500",
+    "clave_unidad": "H87",
+    "categoria": "Medicamentos e inmunoterapia"
+  },
+  {
+    "id": "predef-034",
+    "nombre": "Hizentra 2GR",
+    "descripcion": "Inmunoglobulina subcutánea Hizentra 2GR",
+    "clave_sat": "51182400",
+    "clave_unidad": "H87",
+    "categoria": "Gammaglobulinas / Inmunoglobulinas"
+  },
+  {
+    "id": "predef-035",
+    "nombre": "Hizentra 4GR",
+    "descripcion": "Inmunoglobulina subcutánea Hizentra 4GR",
+    "clave_sat": "51182400",
+    "clave_unidad": "H87",
+    "categoria": "Gammaglobulinas / Inmunoglobulinas"
+  },
+  {
+    "id": "predef-036",
+    "nombre": "HIGLOBIN 10GR",
+    "descripcion": "Inmunoglobulina intravenosa HIGLOBIN 10GR",
+    "clave_sat": "51182400",
+    "clave_unidad": "H87",
+    "categoria": "Gammaglobulinas / Inmunoglobulinas"
+  },
+  {
+    "id": "predef-037",
+    "nombre": "TENGELINE 10% 5G/50ML",
+    "descripcion": "Inmunoglobulina intravenosa TENGELINE 10% 5G/50ML",
+    "clave_sat": "51182400",
+    "clave_unidad": "H87",
+    "categoria": "Gammaglobulinas / Inmunoglobulinas"
+  },
+  {
+    "id": "predef-038",
+    "nombre": "TENGELINE 10G/100ML",
+    "descripcion": "Inmunoglobulina intravenosa TENGELINE 10G/100ML",
+    "clave_sat": "51182400",
+    "clave_unidad": "H87",
+    "categoria": "Gammaglobulinas / Inmunoglobulinas"
+  },
+  {
+    "id": "predef-039",
+    "nombre": "Transferón",
+    "descripcion": "Inmunoglobulina (factor de transferencia) Transferón",
+    "clave_sat": "51182400",
+    "clave_unidad": "H87",
+    "categoria": "Gammaglobulinas / Inmunoglobulinas"
+  }
+]
+

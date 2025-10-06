@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Autenticación</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Verificador de Autenticación</h1>
+    
+    <div id="status"></div>
+    
+    <h2>📋 Información del Token</h2>
+    <pre id="tokenInfo">Cargando...</pre>
+    
+    <h2>👤 Información del Usuario</h2>
+    <pre id="userInfo">Cargando...</pre>
+    
+    <h2>🔧 Acciones</h2>
+    <button onclick="checkAuth()">🔄 Verificar Autenticación</button>
+    <button onclick="clearAuth()">🗑️ Limpiar Autenticación</button>
+    <button onclick="testAPI()">🧪 Probar API</button>
+
+    <script>
+        function checkAuth() {
+            const statusDiv = document.getElementById('status');
+            const tokenInfo = document.getElementById('tokenInfo');
+            const userInfo = document.getElementById('userInfo');
+            
+            // Verificar token
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (!token) {
+                statusDiv.innerHTML = '<div class="error">❌ No hay token en localStorage</div>';
+                tokenInfo.textContent = 'No hay token disponible';
+                userInfo.textContent = 'No hay usuario disponible';
+                return;
+            }
+            
+            if (!user) {
+                statusDiv.innerHTML = '<div class="error">❌ No hay información de usuario en localStorage</div>';
+                tokenInfo.textContent = 'No hay usuario disponible';
+                return;
+            }
+            
+            try {
+                // Decodificar token
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const now = Math.floor(Date.now() / 1000);
+                const exp = payload.exp;
+                const isExpired = now > exp;
+                
+                if (isExpired) {
+                    statusDiv.innerHTML = '<div class="error">❌ Token expirado</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="success">✅ Token válido</div>';
+                }
+                
+                tokenInfo.textContent = JSON.stringify({
+                    expirado: isExpired,
+                    tiempoActual: new Date(now * 1000).toISOString(),
+                    expiracion: new Date(exp * 1000).toISOString(),
+                    payload: payload
+                }, null, 2);
+                
+                // Información del usuario
+                const userData = JSON.parse(user);
+                userInfo.textContent = JSON.stringify(userData, null, 2);
+                
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="error">❌ Error decodificando token: ' + error.message + '</div>';
+                tokenInfo.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            document.getElementById('status').innerHTML = '<div class="warning">⚠️ Autenticación limpiada</div>';
+            document.getElementById('tokenInfo').textContent = 'Autenticación limpiada';
+            document.getElementById('userInfo').textContent = 'Autenticación limpiada';
+        }
+        
+        async function testAPI() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('No hay token disponible');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/inventory/use', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        nombrePaciente: "Test",
+                        tipoTratamiento: "VACUNAS_PEDIATRICAS",
+                        sedeId: "ae72a3f3-ea9d-4f1c-aa58-cb012f714e21",
+                        items: [{
+                            nombreProducto: "Test Product",
+                            cantidad: 1,
+                            doses: 1
+                        }],
+                        observaciones: "Test",
+                        tuvoReaccion: false
+                    })
+                });
+                
+                const result = await response.json();
+                alert(`Respuesta: ${response.status}\n${JSON.stringify(result, null, 2)}`);
+                
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        // Verificar al cargar la página
+        checkAuth();
+    </script>
+</body>
+</html>
+
